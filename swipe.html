@@ -73,7 +73,7 @@
         </footer>
 
         <!-- BOTTOM TAB NAVIGATION -->
-        <nav class="w-full h-16 bg-scout-dark border-t border-zinc-900 flex justify-around items-center px-4 shrink-0">
+        <nav class="w-full h-16 bg-scout-dark border-t border-zinc-900 flex justify-around items-center px-2 shrink-0">
             <a href="index.html" class="flex flex-col items-center space-y-0.5 text-scout-neon">
                 <i class="fa-solid fa-compass text-base"></i>
                 <span class="text-[9px] font-bold tracking-tight">Discover</span>
@@ -119,14 +119,32 @@
             items = data;
 
             if (searchQuery) {
-                document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
+                document.getElementById('deckHeaderTitle').innerText = `AI SEARCH: "${searchQuery}"`;
+                const queryLower = searchQuery.toLowerCase();
+
+                // Smart AI synonym mapping so broad queries catch associated parts/items
+                const categorySynonyms = {
+                    'car': ['exhaust', 'bmw', 'ford', 'engine', 'wheel', 'brake', 'suspension', 'parts', 'vehicle', 's-max', 'touring', 'm47'],
+                    'vehicle': ['exhaust', 'bmw', 'ford', 'engine', 'wheel', 'brake', 'suspension', 'parts', 'car', 's-max', 'touring', 'm47'],
+                    'chair': [ 'seat', 'stool', 'furniture', 'sofa', 'bench' ],
+                    'cleaner': [ 'vacuum', 'dyson', 'vax', 'shark', 'henry', 'carpet' ],
+                    'tool': [ 'bench', 'saw', 'drill', 'workshop', 'hammer' ]
+                };
+
+                let expandedKeywords = [queryLower];
+                for (let [key, synonyms] of Object.entries(categorySynonyms)) {
+                    if (queryLower.includes(key)) {
+                        expandedKeywords = expandedKeywords.concat(synonyms);
+                    }
+                }
+
                 const stopWords = ['im', 'i', 'am', 'looking', 'for', 'a', 'an', 'the', 'some', 'please', 'can', 'you', 'find'];
-                const keywords = searchQuery.toLowerCase().split(/\s+/).filter(word => !stopWords.includes(word));
+                const userWords = queryLower.split(/\s+/).filter(word => !stopWords.includes(word));
+                expandedKeywords = expandedKeywords.concat(userWords);
 
                 items = data.filter(item => {
                     const searchableText = `${item.title} ${item.description || ''} ${item.location || ''}`.toLowerCase();
-                    if (keywords.length === 0) return searchableText.includes(searchQuery.toLowerCase());
-                    return keywords.some(kw => searchableText.includes(kw));
+                    return expandedKeywords.some(keyword => searchableText.includes(keyword));
                 });
 
                 if (items.length === 0) {
@@ -136,8 +154,8 @@
                                 <i class="fa-solid fa-ghost"></i>
                             </div>
                             <div>
-                                <h3 class="text-white font-black text-lg">No matches found</h3>
-                                <p class="text-zinc-500 text-xs">No listings matched "${searchQuery}".</p>
+                                <h3 class="text-white font-black text-lg">AI found no matches</h3>
+                                <p class="text-zinc-500 text-xs">Nothing related to "${searchQuery}" in local stock.</p>
                             </div>
                             <button onclick="window.location.href='swipe.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
                                 View Full Deck
@@ -197,7 +215,7 @@
                             <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location || 'Crediton, Devon'}</p>
                         </div>
                         <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
-                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Local Match</span>
+                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> AI Match</span>
                             <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
                         </div>
                     </div>
