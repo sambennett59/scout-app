@@ -8,6 +8,13 @@
     <script>tailwind.config = { theme: { extend: { colors: { scout: { dark: '#121214', card: '#1e1e22', neon: '#C6FF00', neonhover: '#adff2f' } } } } }</script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script type="importmap">
+      {
+        "imports": {
+          "@google/genai": "https://esm.run/@google/genai"
+        }
+      }
+    </script>
     <link rel="manifest" href="manifest.json">
     <style>
         body { background-color: #0d0d0d; overflow: hidden; touch-action: none; -webkit-tap-highlight-color: transparent; }
@@ -120,32 +127,38 @@
 
             if (searchQuery) {
                 document.getElementById('deckHeaderTitle').innerText = `AI SEARCH: "${searchQuery}"`;
-                const queryLower = searchQuery.toLowerCase();
 
-                // Smart AI synonym mapping so broad queries catch associated parts/items
-                const categorySynonyms = {
-                    'car': ['exhaust', 'bmw', 'ford', 'engine', 'wheel', 'brake', 'suspension', 'parts', 'vehicle', 's-max', 'touring', 'm47'],
-                    'vehicle': ['exhaust', 'bmw', 'ford', 'engine', 'wheel', 'brake', 'suspension', 'parts', 'car', 's-max', 'touring', 'm47'],
-                    'chair': [ 'seat', 'stool', 'furniture', 'sofa', 'bench' ],
-                    'cleaner': [ 'vacuum', 'dyson', 'vax', 'shark', 'henry', 'carpet' ],
-                    'tool': [ 'bench', 'saw', 'drill', 'workshop', 'hammer' ]
-                };
+                if (data.length === 0) {
+                    items = [];
+                } else {
+                    try {
+                        const { GoogleGenAI } = await import("@google/genai");
+                        const ai = new GoogleGenAI({ apiKey: "YOUR_GEMINI_API_KEY_HERE" });
 
-                let expandedKeywords = [queryLower];
-                for (let [key, synonyms] of Object.entries(categorySynonyms)) {
-                    if (queryLower.includes(key)) {
-                        expandedKeywords = expandedKeywords.concat(synonyms);
+                        const itemSummaries = data.map(item => ({ id: item.id, title: item.title }));
+
+                        const prompt = `You are a semantic search engine for a local second-hand marketplace app called SCOUT. 
+                        The user is searching for: "${searchQuery}".
+                        Here is the list of available items:
+                        ${JSON.stringify(itemSummaries)}
+
+                        Analyze the user's intent semantically (e.g. if they search 'dinosaur', a 'Huge T-Rex' matches because a T-Rex is a dinosaur; if they search 'car', car parts or exhausts match). Return ONLY a JSON array containing the exact 'id' values of the items that match. If none match, return an empty array []. No markdown formatting, just raw JSON array.`;
+
+                        const response = await ai.models.generateContent({
+                            model: 'gemini-2.5-flash',
+                            contents: prompt,
+                        });
+
+                        const rawText = response.text.trim().replace(/```json/g, '').replace(/```/g, '');
+                        const matchedIds = JSON.parse(rawText);
+
+                        items = data.filter(item => matchedIds.map(String).includes(String(item.id)));
+
+                    } catch (err) {
+                        console.error("AI Search fallback to keyword match:", err);
+                        items = data.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
                     }
                 }
-
-                const stopWords = ['im', 'i', 'am', 'looking', 'for', 'a', 'an', 'the', 'some', 'please', 'can', 'you', 'find'];
-                const userWords = queryLower.split(/\s+/).filter(word => !stopWords.includes(word));
-                expandedKeywords = expandedKeywords.concat(userWords);
-
-                items = data.filter(item => {
-                    const searchableText = `${item.title} ${item.description || ''} ${item.location || ''}`.toLowerCase();
-                    return expandedKeywords.some(keyword => searchableText.includes(keyword));
-                });
 
                 if (items.length === 0) {
                     document.getElementById('cardDeck').innerHTML = `
