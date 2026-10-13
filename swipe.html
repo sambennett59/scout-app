@@ -108,6 +108,7 @@
         async function loadDeck() {
             const urlParams = new URLSearchParams(window.location.search);
             const searchQuery = urlParams.get('q');
+            const mode = urlParams.get('mode');
 
             const { data, error } = await db.from('items').select('*');
             if (error || !data || data.length === 0) {
@@ -115,9 +116,10 @@
                 return;
             }
 
+            items = data;
+
             if (searchQuery) {
-                document.getElementById('deckHeaderTitle').innerText = `AI MATCH: "${searchQuery}"`;
-                
+                document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
                 const stopWords = ['im', 'i', 'am', 'looking', 'for', 'a', 'an', 'the', 'some', 'please', 'can', 'you', 'find'];
                 const keywords = searchQuery.toLowerCase().split(/\s+/).filter(word => !stopWords.includes(word));
 
@@ -144,11 +146,16 @@
                     `;
                     return;
                 }
+                currentIndex = 0;
+            } else if (mode === 'surprise') {
+                document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
+                const surpriseId = sessionStorage.getItem('scout_surprise_id');
+                const foundIndex = items.findIndex(i => String(i.id) === String(surpriseId));
+                currentIndex = foundIndex !== -1 ? foundIndex : Math.floor(Math.random() * items.length);
             } else {
-                items = data;
+                currentIndex = 0;
             }
 
-            currentIndex = 0;
             renderCard();
         }
 
@@ -156,7 +163,21 @@
             const deckContainer = document.getElementById('cardDeck');
 
             if (currentIndex >= items.length) {
-                currentIndex = 0; 
+                deckContainer.innerHTML = `
+                    <div class="text-center space-y-4">
+                        <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
+                            <i class="fa-solid fa-ghost"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-black text-lg">You've seen it all!</h3>
+                            <p class="text-zinc-500 text-xs">No more listings left in this stack.</p>
+                        </div>
+                        <button onclick="window.location.href='index.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
+                            Back to Discover
+                        </button>
+                    </div>
+                `;
+                return;
             }
 
             document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
@@ -176,7 +197,7 @@
                             <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location || 'Crediton, Devon'}</p>
                         </div>
                         <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
-                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> AI Match</span>
+                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Local Match</span>
                             <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
                         </div>
                     </div>
