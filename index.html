@@ -2,111 +2,100 @@
 <html lang="en">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>SCOUT — Discover Local Bargains</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = { theme: { extend: { colors: { scout: { dark: '#121214', card: '#1e1e22', neon: '#C6FF00', neonhover: '#adff2f' } } } } }
+    </script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link rel="manifest" href="manifest.json">
-    <meta name="mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <style>
-        body { background-color: #0d0d0d; overflow-x: hidden; }
-        .phone-container {
-            max-width: 430px; min-height: 100vh;
-            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
-            margin: 0 auto; position: relative; padding-bottom: 110px;
-        }
-    </style>
+    <meta name="theme-color" content="#121214">
+    <style>body { background-color: #0d0d0d; -webkit-tap-highlight-color: transparent; } .phone-container { max-width: 430px; min-height: 100vh; background-color: #121214; margin: 0 auto; position: relative; padding-bottom: 90px; overflow-x: hidden; }</style>
 </head>
 <body class="text-white font-sans antialiased">
-
-    <div class="phone-container flex flex-col justify-between">
+    <div class="phone-container flex flex-col">
         
         <!-- HEADER -->
-        <header class="flex justify-between items-center px-6 pt-6 pb-4">
-            <div class="flex items-center space-x-2.5">
-                <div class="w-9 h-9 bg-[#bcf53f] rounded-xl flex items-center justify-center text-[#121214] font-black text-base shadow-md">
-                    S
+        <header class="flex justify-between items-center px-6 pt-8 pb-6">
+            <div class="flex items-center space-x-3">
+                <div class="w-12 h-12 bg-scout-neon rounded-2xl flex items-center justify-center text-scout-dark text-2xl shadow-lg">
+                    <i class="fa-solid fa-compass"></i>
                 </div>
                 <div>
-                    <span class="font-black tracking-tight text-lg text-white block leading-none">SCOUT</span>
-                    <span class="text-[10px] font-bold text-[#bcf53f] tracking-tight block mt-0.5">Find your next something</span>
+                    <h1 class="font-black tracking-wide text-2xl text-white leading-none">SCOUT</h1>
+                    <span class="text-xs font-semibold text-scout-neon tracking-wide block mt-1">Find Your Next Something.</span>
                 </div>
             </div>
-            <a href="profile.html" class="w-9 h-9 bg-[#1e1e22] border border-zinc-800 rounded-full flex items-center justify-center text-[#bcf53f] hover:bg-zinc-800 transition">
-                <i class="fa-solid fa-user text-xs"></i>
-            </a>
+            <a href="profile.html" class="text-white text-2xl hover:text-scout-neon transition"><i class="fa-regular fa-circle-user"></i></a>
         </header>
 
-        <!-- MAIN CONTENT -->
-        <main class="px-6 py-4 flex-grow space-y-6">
-            
-            <!-- HERO BANNER & SEARCH -->
-            <div class="bg-gradient-to-br from-[#1e1e22] to-[#121214] border border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-xl">
-                <span class="bg-[#bcf53f]/10 text-[#bcf53f] border border-[#bcf53f]/30 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
-                    Local Marketplace Aggregator
-                </span>
-                <h2 class="text-3xl font-black tracking-tight text-white leading-tight">
-                    Swipe Local <br><span class="text-[#bcf53f]">Bargains.</span>
-                </h2>
-                <p class="text-xs text-zinc-400">
-                    Discover listings from eBay, Facebook Marketplace, and Vinted in one unified swipe deck.
-                </p>
-
-                <!-- INTENT SEARCH BAR -->
-                <div class="pt-2">
-                    <div class="flex bg-[#121214] border border-zinc-800 rounded-2xl p-1.5 focus-within:border-[#bcf53f] transition">
-                        <input type="text" id="aiSearchInput" placeholder="What are you looking for today?" class="w-full bg-transparent px-3 text-sm text-white placeholder-zinc-600 focus:outline-none" />
-                        <button onclick="triggerAISearch()" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shrink-0 cursor-pointer">
-                            Search
-                        </button>
-                    </div>
-                </div>
+        <!-- SEARCH -->
+        <div class="px-6 mb-5">
+            <div class="flex bg-scout-card rounded-2xl p-4 items-center focus-within:ring-1 focus-within:ring-scout-neon transition shadow-md">
+                <i class="fa-solid fa-magnifying-glass text-zinc-400 text-lg mr-3"></i>
+                <input type="text" id="aiSearchInput" placeholder="What are you hunting for?" class="w-full bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none" onkeypress="if(event.key === 'Enter') triggerAISearch()" />
             </div>
+        </div>
 
-            <!-- SURPRISE ME BUTTON -->
-            <button onclick="triggerSurpriseMe()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] flex items-center justify-center space-x-2 text-sm cursor-pointer">
-                <i class="fa-solid fa-dice text-base"></i>
-                <span>Surprise Me 🎲</span>
+        <!-- SURPRISE ME BUTTON -->
+        <div class="px-6 mb-5">
+            <button onclick="triggerSurpriseMe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark rounded-2xl py-6 flex flex-col items-center justify-center shadow-lg transition active:scale-95 cursor-pointer">
+                <i class="fa-solid fa-shuffle text-2xl mb-2"></i>
+                <h2 class="text-2xl font-black tracking-tight mb-1">SURPRISE ME</h2>
+                <p class="text-sm font-semibold text-scout-dark/80">Discover your next bargain</p>
             </button>
+        </div>
 
-            <!-- BROADCAST LISTING LINK -->
-            <a href="add.html" class="bg-[#1e1e22] hover:bg-[#25252b] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between transition block shadow-md">
-                <div class="flex items-center space-x-3">
-                    <div class="w-10 h-10 bg-[#bcf53f]/10 text-[#bcf53f] rounded-xl flex items-center justify-center">
-                        <i class="fa-solid fa-plus text-sm"></i>
-                    </div>
-                    <div>
-                        <span class="font-bold text-sm text-white block">Broadcast Listing</span>
-                        <span class="text-[10px] text-zinc-400">Publish a bargain straight to cloud</span>
-                    </div>
-                </div>
-                <i class="fa-solid fa-chevron-right text-xs text-zinc-600"></i>
+        <!-- ACTION GRID -->
+        <div class="px-6 grid grid-cols-2 gap-4 mb-6">
+            <a href="radars.html" class="bg-scout-card rounded-2xl p-5 block transition active:scale-95 shadow-md">
+                <i class="fa-solid fa-bullseye text-scout-neon text-2xl mb-3 block"></i>
+                <h3 class="text-lg font-bold text-white mb-1">My Radars</h3>
+                <p class="text-xs text-zinc-400">Track things you want</p>
             </a>
+            <a href="finds.html" class="bg-scout-card rounded-2xl p-5 block transition active:scale-95 shadow-md">
+                <i class="fa-regular fa-heart text-scout-neon text-2xl mb-3 block"></i>
+                <h3 class="text-lg font-bold text-white mb-1">My Finds</h3>
+                <p class="text-xs text-zinc-400">Your saved bargains</p>
+            </a>
+        </div>
 
-        </main>
+        <!-- PLAIN TEXT SELLING PROMO -->
+        <div class="px-6 mb-4">
+            <div class="border-2 border-scout-neon rounded-2xl p-5 shadow-lg">
+                <h3 class="text-lg font-bold text-white flex items-center mb-2">
+                    <i class="fa-solid fa-tags text-scout-neon mr-2"></i> Selling something?
+                </h3>
+                <p class="text-sm text-zinc-400 leading-relaxed mb-4">
+                    Add your eBay, Facebook Marketplace, Amazon or Vinted listing link to help potential buyers discover it.
+                </p>
+                <a href="add.html" class="text-scout-neon font-black text-sm uppercase tracking-wide flex items-center hover:text-scout-neonhover transition">
+                    ADD YOUR LISTING <i class="fa-solid fa-arrow-right ml-2"></i>
+                </a>
+            </div>
+        </div>
 
-        <!-- BOTTOM TAB NAVIGATION -->
-        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
-            <a href="index.html" class="flex flex-col items-center space-y-1 text-[#bcf53f]">
-                <i class="fa-solid fa-compass text-lg"></i>
+        <!-- BOTTOM NAV -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-scout-dark/95 backdrop-blur-md border-t border-zinc-900 flex justify-around items-center px-2 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-scout-neon">
+                <i class="fa-solid fa-compass text-xl"></i>
                 <span class="text-[10px] font-bold tracking-tight">Discover</span>
             </a>
             <a href="finds.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-solid fa-heart text-lg"></i>
+                <i class="fa-regular fa-heart text-xl"></i>
                 <span class="text-[10px] font-semibold tracking-tight">Finds</span>
             </a>
             <a href="radars.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-solid fa-bullseye text-lg"></i>
+                <i class="fa-solid fa-bullseye text-xl"></i>
                 <span class="text-[10px] font-semibold tracking-tight">Radars</span>
             </a>
             <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-solid fa-user text-lg"></i>
+                <i class="fa-regular fa-user text-xl"></i>
                 <span class="text-[10px] font-semibold tracking-tight">Profile</span>
             </a>
         </nav>
-
     </div>
 
     <script>
@@ -116,20 +105,13 @@
 
         window.triggerAISearch = function() {
             const query = document.getElementById('aiSearchInput').value.trim();
-            if (!query) {
-                window.location.href = 'swipe.html';
-                return;
-            }
+            if (!query) { window.location.href = 'swipe.html'; return; }
             window.location.href = `swipe.html?q=${encodeURIComponent(query)}`;
         }
 
         window.triggerSurpriseMe = async function() {
             const { data: items } = await db.from('items').select('*');
-            
-            if (!items || items.length === 0) {
-                window.location.href = 'swipe.html';
-                return;
-            }
+            if (!items || items.length === 0) { window.location.href = 'swipe.html'; return; }
 
             const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
             const interests = profile.interests ? profile.interests.split(',').map(i => i.trim().toLowerCase()) : ['cars', 'tools', 'wood'];
@@ -139,10 +121,8 @@
                 return interests.some(interest => title.includes(interest));
             });
 
-            // Fallback to completely random listings if no exact interest match is found
             const pool = (matchedItems.length > 0) ? matchedItems : items;
             const randomItem = pool[Math.floor(Math.random() * pool.length)];
-
             const searchKeyword = randomItem ? randomItem.title.split(' ')[0] : '';
             window.location.href = `swipe.html?q=${encodeURIComponent(searchKeyword)}`;
         }
