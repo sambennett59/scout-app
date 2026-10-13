@@ -1,0 +1,184 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Broadcast Listing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#bcf53f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow-x: hidden; }
+        .phone-container {
+            max-width: 430px; min-height: 100vh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; padding-bottom: 110px;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <div class="phone-container flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-4">
+            <a href="index.html" class="text-zinc-400 hover:text-white text-xl"><i class="fa-solid fa-chevron-left"></i></a>
+            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">BROADCAST LISTING</h1>
+            <div class="w-6"></div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="px-6 py-4 flex-grow space-y-6">
+            <div class="mb-2">
+                <h2 class="text-2xl font-black text-white">Share a Bargain</h2>
+                <p class="text-xs text-zinc-400 mt-1">Upload an image file to cloud storage and publish your find.</p>
+            </div>
+
+            <!-- FORM CONTAINER -->
+            <div class="space-y-4 bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5">
+                
+                <!-- TITLE -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label>
+                    <input type="text" id="itemTitle" placeholder="e.g. Dyson V10 Absolute Vacuum" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- PRICE -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label>
+                    <input type="text" id="itemPrice" placeholder="e.g. 9.99 or 45.00" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- LOCATION -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Location</label>
+                    <input type="text" id="itemLocation" placeholder="e.g. Crediton, Devon" value="Crediton, Devon" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- IMAGE FILE UPLOAD -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image File</label>
+                    <input type="file" id="itemImageFile" accept="image/*" class="w-full bg-[#121214] text-zinc-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#bcf53f] file:text-[#121214] hover:file:bg-[#adff2f] text-xs cursor-pointer border border-zinc-800 rounded-xl" />
+                </div>
+
+                <!-- EXTERNAL LINK -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Live Marketplace Link (Buy URL)</label>
+                    <input type="text" id="itemLink" placeholder="https://www.facebook.com/marketplace/item/..." class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <button id="publishBtn" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2">
+                    Launch to Swipe Deck 🚀
+                </button>
+            </div>
+        </main>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-heart text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const publishBtn = document.getElementById('publishBtn');
+
+        publishBtn.addEventListener('click', async () => {
+            const title = document.getElementById('itemTitle').value.trim();
+            let rawPrice = document.getElementById('itemPrice').value.trim();
+            const location = document.getElementById('itemLocation').value.trim();
+            const imageFileInput = document.getElementById('itemImageFile');
+            const external_link = document.getElementById('itemLink').value.trim();
+            
+            const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
+            const userEmail = profile.email || 'anonymous';
+
+            if (!title || !rawPrice || !external_link) {
+                alert("Please fill in at least the title, price, and live marketplace link.");
+                return;
+            }
+
+            rawPrice = rawPrice.replace('£', '').trim();
+            const formattedPrice = `£${parseFloat(rawPrice).toFixed(2)}`;
+            const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : formattedPrice;
+
+            publishBtn.innerText = "Uploading Image to Cloud...";
+            publishBtn.disabled = true;
+
+            let imageUrl = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
+
+            if (imageFileInput.files && imageFileInput.files[0]) {
+                const file = imageFileInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+                
+                const { data: uploadData, error: uploadError } = await db.storage
+                    .from('item-images')
+                    .upload(fileName, file);
+
+                if (uploadError) {
+                    console.error("Storage upload error:", uploadError);
+                    alert("Image upload failed: " + uploadError.message);
+                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                    publishBtn.disabled = false;
+                    return;
+                }
+
+                const { data: publicUrlData } = db.storage
+                    .from('item-images')
+                    .getPublicUrl(fileName);
+
+                imageUrl = publicUrlData.publicUrl;
+            }
+
+            publishBtn.innerText = "Saving to Database...";
+
+            const newItem = {
+                title,
+                price: finalPrice,
+                location,
+                image_url: imageUrl,
+                external_link,
+                user_email: userEmail,
+                created_at: new Date().toISOString()
+            };
+
+            const { error: insertError } = await db.from('items').insert([newItem]);
+
+            if (insertError) {
+                console.error("Supabase insert error:", insertError);
+                alert("Error saving listing: " + insertError.message);
+                publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                publishBtn.disabled = false;
+            } else {
+                alert("Bargain launched successfully to cloud storage!");
+                window.location.href = 'swipe.html';
+            }
+        });
+    </script>
+</body>
+</html>

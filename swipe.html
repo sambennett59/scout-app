@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Swipe Deck</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow: hidden; touch-action: none; }
+        .phone-container {
+            max-width: 430px; height: 100vh; height: 100dvh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; display: flex; flex-direction: column; justify-content: space-between;
+        }
+        .swipe-card {
+            transition: transform 0.25s ease, opacity 0.25s ease;
+            touch-action: pan-y;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <div class="phone-container">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-2 z-20 shrink-0">
+            <button onclick="history.back()" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
+            <div class="text-center">
+                <h1 class="text-xs font-black tracking-widest text-[#bcf53f] uppercase">DISCOVER DECK</h1>
+                <span class="text-[10px] text-zinc-400 font-semibold" id="cardCounter">Right Swipes: 0 of 5</span>
+            </div>
+            <a href="finds.html" class="relative text-zinc-400 hover:text-white text-lg">
+                <i class="fa-solid fa-heart"></i>
+                <span id="findsBadge" class="absolute -top-1 -right-2 bg-[#bcf53f] text-[#121214] text-[9px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
+            </a>
+        </header>
+
+        <!-- SWIPE CARD CONTAINER -->
+        <main class="px-6 py-2 flex-grow relative flex items-center justify-center overflow-hidden">
+            <div id="cardDeck" class="w-full h-full max-h-[520px] relative flex items-center justify-center">
+                <div class="text-center text-zinc-500 text-xs">
+                    <i class="fa-solid fa-spinner fa-spin text-xl text-[#bcf53f] mb-2 block"></i>
+                    Loading listings...
+                </div>
+            </div>
+
+            <!-- 49P PAYWALL MODAL (POPS UP ONLY ON RIGHT SWIPE AT LIMIT) -->
+            <div id="paywallOverlay" class="absolute inset-0 bg-[#121214]/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
+                <div class="w-16 h-16 bg-[#bcf53f]/10 border border-[#bcf53f]/30 text-[#bcf53f] rounded-2xl flex items-center justify-center text-2xl shadow-lg">
+                    <i class="fa-solid fa-heart-circle-bolt"></i>
+                </div>
+                <div class="space-y-1">
+                    <h2 class="text-xl font-black text-white">Right Swipe Limit Reached</h2>
+                    <p class="text-xs text-zinc-400">You can keep swiping left for free, but liking this item requires 1 extra right-swipe slot for 49p.</p>
+                </div>
+                <button onclick="unlockMoreRightSwipe()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
+                    <span>Unlock 1 Extra Right Swipe for 49p</span>
+                    <i class="fa-solid fa-arrow-right"></i>
+                </button>
+                <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-[#1e1e22] hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-3 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
+                    No thanks, swipe left instead
+                </button>
+                <a href="finds.html" class="text-xs text-zinc-400 hover:text-white underline pt-1 block">View Saved Finds Basket</a>
+            </div>
+        </main>
+
+        <!-- SWIPE ACTION BUTTONS -->
+        <footer class="px-6 pb-8 pt-2 z-20 shrink-0">
+            <div class="flex justify-center items-center space-x-6">
+                <button onclick="swipeAction('left')" class="w-16 h-16 bg-[#1e1e22] hover:bg-zinc-800 text-red-400 border border-zinc-800 rounded-full flex items-center justify-center text-xl shadow-lg transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+                <button onclick="swipeAction('right')" class="w-20 h-20 bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] rounded-full flex items-center justify-center text-2xl shadow-xl transition active:scale-95 cursor-pointer">
+                    <i class="fa-solid fa-heart"></i>
+                </button>
+            </div>
+        </footer>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="w-full h-16 bg-[#121214] border-t border-zinc-900 flex justify-around items-center px-4 shrink-0">
+            <a href="index.html" class="flex flex-col items-center space-y-0.5 text-[#bcf53f]">
+                <i class="fa-solid fa-compass text-base"></i>
+                <span class="text-[9px] font-bold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-heart text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let items = [];
+        let currentIndex = 0;
+        let rightSwipeLimit = 5; // Starts at 5 free right-swipe slots
+        let savedFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+        document.getElementById('findsBadge').innerText = savedFinds.length;
+
+        async function loadDeck() {
+            const { data, error } = await db.from('items').select('*');
+            if (error || !data || data.length === 0) {
+                document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+                return;
+            }
+
+            items = data.sort(() => Math.random() - 0.5);
+            currentIndex = 0;
+            renderCard();
+        }
+
+        function renderCard() {
+            const deckContainer = document.getElementById('cardDeck');
+
+            if (currentIndex >= items.length) {
+                items = items.sort(() => Math.random() - 0.5);
+                currentIndex = 0;
+            }
+
+            document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
+            const item = items[currentIndex];
+
+            deckContainer.innerHTML = `
+                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-[#1e1e22] border border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
+                    <div class="relative w-full h-[65%] bg-zinc-900">
+                        <img src="${item.image_url}" class="w-full h-full object-cover" />
+                        <span class="absolute top-4 left-4 bg-[#121214]/80 backdrop-blur-md text-[#bcf53f] border border-zinc-800 text-xs font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg">
+                            ${item.price}
+                        </span>
+                    </div>
+                    <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-[#1e1e22] to-[#121214]">
+                        <div class="space-y-1">
+                            <h2 class="text-base font-black text-white leading-snug line-clamp-2">${item.title}</h2>
+                            <p class="text-xs text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-[#bcf53f]"></i>${item.location || 'Crediton, Devon'}</p>
+                        </div>
+                        <div class="flex justify-between items-center pt-2 border-t border-zinc-800/80">
+                            <span class="text-xs font-bold text-[#bcf53f]">SCOUT Random Pool</span>
+                            <span class="text-[10px] text-zinc-500 uppercase font-extrabold tracking-widest">Swipe Left/Right</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            initTouchGestures();
+        }
+
+        window.swipeAction = function(direction) {
+            const card = document.getElementById('activeSwipeCard');
+            if (!card) return;
+
+            if (direction === 'right') {
+                // Check if user has hit the right-swipe limit
+                if (savedFinds.length >= rightSwipeLimit) {
+                    // Stop card animation and trigger the 49p paywall modal instead of blocking navigation
+                    document.getElementById('paywallOverlay').classList.remove('hidden');
+                    return;
+                }
+
+                const item = items[currentIndex];
+                if (!savedFinds.some(f => f.title === item.title)) {
+                    savedFinds.push(item);
+                    localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
+                    document.getElementById('findsBadge').innerText = savedFinds.length;
+                }
+                card.style.transform = 'translateX(120deg) rotate(20deg)';
+            } else {
+                // Left swipes are always 100% free and unlimited
+                card.style.transform = 'translateX(-120deg) rotate(-20deg)';
+            }
+            card.style.opacity = '0';
+
+            setTimeout(() => {
+                currentIndex++;
+                renderCard();
+            }, 250);
+        }
+
+        // Handles paying 49p to add precisely 1 extra right-swipe slot and resumes gameplay
+        window.unlockMoreRightSwipe = function() {
+            if (confirm("Confirm 49p payment for 1 extra right-swipe slot?")) {
+                rightSwipeLimit += 1; // Increase limit by exactly 1 slot
+                document.getElementById('paywallOverlay').classList.add('hidden'); // Hide paywall
+                
+                // Immediately process the right swipe for the current card since they just paid for it!
+                const item = items[currentIndex];
+                if (!savedFinds.some(f => f.title === item.title)) {
+                    savedFinds.push(item);
+                    localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
+                    document.getElementById('findsBadge').innerText = savedFinds.length;
+                }
+
+                const card = document.getElementById('activeSwipeCard');
+                if (card) {
+                    card.style.transform = 'translateX(120deg) rotate(20deg)';
+                    card.style.opacity = '0';
+                }
+
+                setTimeout(() => {
+                    currentIndex++;
+                    renderCard();
+                }, 250);
+            }
+        }
+
+        // Allows the user to bypass the paywall if they click "No thanks" and automatically swipe left instead
+        window.dismissPaywallAndSwipeLeft = function() {
+            document.getElementById('paywallOverlay').classList.add('hidden');
+            swipeAction('left');
+        }
+
+        function initTouchGestures() {
+            const card = document.getElementById('activeSwipeCard');
+            if (!card) return;
+
+            let startX = 0;
+            let currentX = 0;
+
+            card.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+            }, { passive: true });
+
+            card.addEventListener('touchmove', (e) => {
+                currentX = e.touches[0].clientX;
+                const diff = currentX - startX;
+                card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
+            }, { passive: true });
+
+            card.addEventListener('touchend', (e) => {
+                const diff = currentX - startX;
+                if (Math.abs(diff) > 100) {
+                    swipeAction(diff > 0 ? 'right' : 'left');
+                } else {
+                    card.style.transform = 'translateX(0) rotate(0)';
+                }
+            });
+        }
+
+        loadDeck();
+    </script>
+</body>
+</html>
