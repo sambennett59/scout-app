@@ -1,0 +1,173 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Radars</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow-x: hidden; }
+        .phone-container {
+            max-width: 430px; min-height: 100vh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; padding-bottom: 110px;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <div class="phone-container flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-4">
+            <a href="index.html" class="text-zinc-400 hover:text-white text-xl"><i class="fa-solid fa-chevron-left"></i></a>
+            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">ACTIVE RADARS</h1>
+            <div class="w-6"></div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="px-6 py-4 flex-grow space-y-6">
+            <div class="mb-2">
+                <h2 class="text-2xl font-black text-white">Bargain Radars</h2>
+                <p class="text-xs text-zinc-400 mt-1">Set keyword alerts to automatically track items hitting the deck.</p>
+            </div>
+
+            <!-- ADD RADAR FORM -->
+            <div class="space-y-3 bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5 shadow-lg">
+                <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">New Keyword Alert</label>
+                <div class="flex space-x-2">
+                    <input type="text" id="radarKeywordInput" placeholder="e.g. Dyson, BMW E91, Vax" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                    <button onclick="addRadar()" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black px-5 py-3 rounded-xl transition shrink-0">
+                        <i class="fa-solid fa-plus"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- RADARS LIST -->
+            <div class="space-y-3">
+                <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">Your Active Radars & Matches</h3>
+                <div id="radarsListContainer" class="space-y-4">
+                    <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">
+                        Loading radars...
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-heart text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-1 text-[#bcf53f]">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] font-bold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
+
+        window.addRadar = function() {
+            const input = document.getElementById('radarKeywordInput');
+            const keyword = input.value.trim();
+            if (!keyword) return;
+
+            if (!radars.includes(keyword)) {
+                radars.push(keyword);
+                localStorage.setItem('scout_radars', JSON.stringify(radars));
+                input.value = '';
+                loadRadars();
+            }
+        }
+
+        window.deleteRadar = function(keyword) {
+            radars = radars.filter(r => r !== keyword);
+            localStorage.setItem('scout_radars', JSON.stringify(radars));
+            loadRadars();
+        }
+
+        async function loadRadars() {
+            const container = document.getElementById('radarsListContainer');
+            if (radars.length === 0) {
+                container.innerHTML = `
+                    <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-6 text-center text-xs text-zinc-500">
+                        No active radars set. Add a keyword above to start tracking bargains!
+                    </div>
+                `;
+                return;
+            }
+
+            // Fetch items from Supabase to check for matches
+            const { data: items } = await db.from('items').select('*');
+            const allItems = items || [];
+
+            container.innerHTML = '';
+            radars.forEach(radar => {
+                const matches = allItems.filter(item => item.title.toLowerCase().includes(radar.toLowerCase()));
+
+                const radarCard = document.createElement('div');
+                radarCard.className = "bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 space-y-3";
+                
+                let matchesHtml = '';
+                if (matches.length === 0) {
+                    matchesHtml = `<p class="text-[11px] text-zinc-500 italic">Scanning deck... No live matches right now.</p>`;
+                } else {
+                    matchesHtml = `<div class="space-y-2 pt-1">`;
+                    matches.slice(0, 3).forEach(match => {
+                        matchesHtml += `
+                            <a href="${match.external_link || '#'}" target="_blank" class="flex items-center justify-between bg-[#121214] p-2.5 rounded-xl border border-zinc-800/60 hover:border-[#bcf53f] transition block">
+                                <div class="flex items-center space-x-2.5 truncate">
+                                    <img src="${match.image_url}" class="w-9 h-9 rounded-lg object-cover bg-zinc-900 shrink-0" />
+                                    <div class="truncate">
+                                        <span class="text-[#bcf53f] font-bold text-xs block">${match.price}</span>
+                                        <span class="text-[11px] text-zinc-300 truncate block">${match.title}</span>
+                                    </div>
+                                </div>
+                                <span class="text-[10px] text-[#bcf53f] font-bold uppercase tracking-wider shrink-0 ml-2">View →</span>
+                            </a>
+                        `;
+                    });
+                    matchesHtml += `</div>`;
+                }
+
+                radarCard.innerHTML = `
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center space-x-2">
+                            <div class="w-2 h-2 rounded-full bg-[#bcf53f] animate-pulse"></span></div>
+                            <span class="font-black text-sm text-white uppercase tracking-wider">${radar}</span>
+                        </div>
+                        <button onclick="deleteRadar('${radar}')" class="text-zinc-500 hover:text-red-400 text-xs transition">
+                            <i class="fa-solid fa-trash-can"></i>
+                        </button>
+                    </div>
+                    ${matchesHtml}
+                `;
+                container.appendChild(radarCard);
+            });
+        }
+
+        loadRadars();
+    </script>
+</body>
+</html>

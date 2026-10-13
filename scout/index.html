@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Discover Local Bargains</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow-x: hidden; }
+        .phone-container {
+            max-width: 430px; min-height: 100vh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; padding-bottom: 110px;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <div class="phone-container flex flex-col justify-between">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-4">
+            <div class="flex items-center space-x-2.5">
+                <div class="w-9 h-9 bg-[#bcf53f] rounded-xl flex items-center justify-center text-[#121214] font-black text-base shadow-md">
+                    S
+                </div>
+                <div>
+                    <span class="font-black tracking-tight text-lg text-white block leading-none">SCOUT</span>
+                    <span class="text-[10px] font-bold text-[#bcf53f] tracking-tight block mt-0.5">Find your next something</span>
+                </div>
+            </div>
+            <a href="profile.html" class="w-9 h-9 bg-[#1e1e22] border border-zinc-800 rounded-full flex items-center justify-center text-[#bcf53f] hover:bg-zinc-800 transition">
+                <i class="fa-solid fa-user text-xs"></i>
+            </a>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="px-6 py-4 flex-grow space-y-6">
+            
+            <!-- HERO BANNER & SEARCH -->
+            <div class="bg-gradient-to-br from-[#1e1e22] to-[#121214] border border-zinc-800/80 rounded-3xl p-6 space-y-4 shadow-xl">
+                <span class="bg-[#bcf53f]/10 text-[#bcf53f] border border-[#bcf53f]/30 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider">
+                    Local Marketplace Aggregator
+                </span>
+                <h2 class="text-3xl font-black tracking-tight text-white leading-tight">
+                    Swipe Local <br><span class="text-[#bcf53f]">Bargains.</span>
+                </h2>
+                <p class="text-xs text-zinc-400">
+                    Discover listings from eBay, Facebook Marketplace, and Vinted in one unified swipe deck.
+                </p>
+
+                <!-- INTENT SEARCH BAR -->
+                <div class="pt-2">
+                    <div class="flex bg-[#121214] border border-zinc-800 rounded-2xl p-1.5 focus-within:border-[#bcf53f] transition">
+                        <input type="text" id="aiSearchInput" placeholder="What are you looking for today?" class="w-full bg-transparent px-3 text-sm text-white placeholder-zinc-600 focus:outline-none" />
+                        <button onclick="triggerAISearch()" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black px-4 py-2.5 rounded-xl transition text-xs uppercase tracking-wider shrink-0 cursor-pointer">
+                            Search
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SURPRISE ME BUTTON -->
+            <button onclick="triggerSurpriseMe()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] flex items-center justify-center space-x-2 text-sm cursor-pointer">
+                <i class="fa-solid fa-dice text-base"></i>
+                <span>Surprise Me 🎲</span>
+            </button>
+
+            <!-- BROADCAST LISTING LINK -->
+            <a href="add.html" class="bg-[#1e1e22] hover:bg-[#25252b] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between transition block shadow-md">
+                <div class="flex items-center space-x-3">
+                    <div class="w-10 h-10 bg-[#bcf53f]/10 text-[#bcf53f] rounded-xl flex items-center justify-center">
+                        <i class="fa-solid fa-plus text-sm"></i>
+                    </div>
+                    <div>
+                        <span class="font-bold text-sm text-white block">Broadcast Listing</span>
+                        <span class="text-[10px] text-zinc-400">Publish a bargain straight to cloud</span>
+                    </div>
+                </div>
+                <i class="fa-solid fa-chevron-right text-xs text-zinc-600"></i>
+            </a>
+
+        </main>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-[#bcf53f]">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-bold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-heart text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        window.triggerAISearch = function() {
+            const query = document.getElementById('aiSearchInput').value.trim();
+            if (!query) {
+                window.location.href = 'swipe.html';
+                return;
+            }
+            window.location.href = `swipe.html?q=${encodeURIComponent(query)}`;
+        }
+
+        window.triggerSurpriseMe = async function() {
+            const { data: items } = await db.from('items').select('*');
+            
+            if (!items || items.length === 0) {
+                window.location.href = 'swipe.html';
+                return;
+            }
+
+            const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
+            const interests = profile.interests ? profile.interests.split(',').map(i => i.trim().toLowerCase()) : ['cars', 'tools', 'wood'];
+
+            const matchedItems = items.filter(item => {
+                const title = (item.title || '').toLowerCase();
+                return interests.some(interest => title.includes(interest));
+            });
+
+            // Fallback to completely random listings if no exact interest match is found
+            const pool = (matchedItems.length > 0) ? matchedItems : items;
+            const randomItem = pool[Math.floor(Math.random() * pool.length)];
+
+            const searchKeyword = randomItem ? randomItem.title.split(' ')[0] : '';
+            window.location.href = `swipe.html?q=${encodeURIComponent(searchKeyword)}`;
+        }
+    </script>
+</body>
+</html>

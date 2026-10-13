@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Saved Finds</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow-x: hidden; }
+        .phone-container {
+            max-width: 430px; min-height: 100vh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; padding-bottom: 110px;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
+
+    <div class="phone-container flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-4">
+            <a href="index.html" class="text-zinc-400 hover:text-white text-xl"><i class="fa-solid fa-chevron-left"></i></a>
+            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">MY FINDS BASKET</h1>
+            <div class="w-6"></div>
+        </header>
+
+        <!-- MAIN CONTENT -->
+        <main class="px-6 py-4 flex-grow space-y-4">
+            <div class="mb-2">
+                <h2 class="text-2xl font-black text-white">Saved Bargains</h2>
+                <p class="text-xs text-zinc-400 mt-1">All the listings you've favorited from your swipe decks.</p>
+            </div>
+
+            <div id="savedFindsContainer" class="space-y-3">
+                <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-6 text-center text-xs text-zinc-500">
+                    Your finds basket is empty.
+                </div>
+            </div>
+        </main>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-1 text-[#bcf53f]">
+                <i class="fa-solid fa-heart text-lg"></i>
+                <span class="text-[10px] font-bold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const container = document.getElementById('savedFindsContainer');
+        const savedFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+
+        if (savedFinds.length > 0) {
+            container.innerHTML = '';
+            savedFinds.forEach((item, index) => {
+                const targetUrl = item.external_link || '#';
+                const card = document.createElement('div');
+                card.className = "bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between space-x-3";
+                card.innerHTML = `
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <img src="${item.image_url}" class="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-900" />
+                        <div class="truncate">
+                            <span class="text-[#bcf53f] font-black text-sm block">${item.price}</span>
+                            <span class="text-xs text-white font-bold block truncate">${item.title}</span>
+                            <span class="text-[10px] text-zinc-400"><i class="fa-solid fa-location-dot mr-1"></i>${item.location}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button onclick="shareItem('${item.title}', '${targetUrl}', '${item.price}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2.5 rounded-xl transition" title="Share Link">
+                            <i class="fa-solid fa-share-nodes text-xs"></i>
+                        </button>
+                        <a href="${targetUrl}" target="_blank" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black text-[10px] uppercase tracking-wider px-3.5 py-2.5 rounded-xl transition shadow-md">
+                            Buy <i class="fa-solid fa-arrow-right ml-0.5"></i>
+                        </a>
+                        <button onclick="removeFind(${index})" class="text-zinc-600 hover:text-red-400 p-2 transition">
+                            <i class="fa-solid fa-xmark text-xs"></i>
+                        </button>
+                    </div>
+                `;
+                container.appendChild(card);
+            });
+        }
+
+        window.removeFind = function(index) {
+            savedFinds.splice(index, 1);
+            localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
+            location.reload();
+        }
+
+        window.shareItem = function(title, url, price) {
+            if (navigator.share) {
+                navigator.share({ title: 'Scout Bargain', text: `Check out this find: ${title} for ${price}!`, url: url }).catch(() => {});
+            } else {
+                navigator.clipboard.writeText(url);
+                alert("Listing link copied to clipboard!");
+            }
+        }
+    </script>
+</body>
+</html>
