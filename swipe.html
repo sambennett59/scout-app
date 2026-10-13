@@ -118,11 +118,9 @@
             if (searchQuery) {
                 document.getElementById('deckHeaderTitle').innerText = `AI MATCH: "${searchQuery}"`;
                 
-                // Clean natural language query into core keywords (stripping filler words)
                 const stopWords = ['im', 'i', 'am', 'looking', 'for', 'a', 'an', 'the', 'some', 'please', 'can', 'you', 'find'];
                 const keywords = searchQuery.toLowerCase().split(/\s+/).filter(word => !stopWords.includes(word));
 
-                // Filter items matching any extracted keyword
                 items = data.filter(item => {
                     const searchableText = `${item.title} ${item.description || ''} ${item.location || ''}`.toLowerCase();
                     if (keywords.length === 0) return searchableText.includes(searchQuery.toLowerCase());
@@ -158,7 +156,7 @@
             const deckContainer = document.getElementById('cardDeck');
 
             if (currentIndex >= items.length) {
-                currentIndex = 0; // Loops smoothly back to start
+                currentIndex = 0; 
             }
 
             document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
