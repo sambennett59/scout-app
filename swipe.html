@@ -36,7 +36,7 @@
             <div id="cardDeck" class="w-full h-full max-h-[550px] relative flex items-center justify-center">
                 <div class="text-center text-zinc-500 text-sm">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-scout-neon mb-3 block"></i>
-                    Loading database deck...
+                    Loading listings...
                 </div>
             </div>
 
@@ -47,14 +47,14 @@
                 </div>
                 <div class="space-y-2">
                     <h2 class="text-2xl font-black text-white">Right Swipe Limit Reached</h2>
-                    <p class="text-sm text-zinc-400 px-4">You can keep swiping left for free, but liking this item requires 1 extra right-swipe slot for 49p[cite: 14].</p>
+                    <p class="text-sm text-zinc-400 px-4">You can keep swiping left for free, but liking this item requires 1 extra right-swipe slot for 49p.</p>
                 </div>
                 <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center space-x-2 cursor-pointer">
                     <span>Unlock 1 Extra Right Swipe for 49p</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
                 <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-scout-card hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-4 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
-                    No thanks, swipe left instead[cite: 14]
+                    No thanks, swipe left instead
                 </button>
                 <a href="finds.html" class="text-xs text-zinc-500 hover:text-white underline pt-2 block">View Saved Finds Basket</a>
             </div>
@@ -106,15 +106,13 @@
         document.getElementById('findsBadge').innerText = savedFinds.length;
 
         async function loadDeck() {
-            // Pulls ALL items from Supabase without single-item query bottlenecks
             const { data, error } = await db.from('items').select('*');
             if (error || !data || data.length === 0) {
                 document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
                 return;
             }
 
-            // Shuffle all database items into a random stack
-            items = data.sort(() => Math.random() - 0.5);
+            items = data;
             currentIndex = 0;
             renderCard();
         }
@@ -122,23 +120,8 @@
         function renderCard() {
             const deckContainer = document.getElementById('cardDeck');
 
-            // Prevent infinite loops by showing an end state when the stack runs out
             if (currentIndex >= items.length) {
-                deckContainer.innerHTML = `
-                    <div class="text-center space-y-4">
-                        <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
-                            <i class="fa-solid fa-ghost"></i>
-                        </div>
-                        <div>
-                            <h3 class="text-white font-black text-lg">You've seen it all!</h3>
-                            <p class="text-zinc-500 text-xs">No more bargains left in this deck.</p>
-                        </div>
-                        <button onclick="window.location.href='index.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition">
-                            Back to Discover
-                        </button>
-                    </div>
-                `;
-                return;
+                currentIndex = 0; // Loops smoothly back to the start of your items array
             }
 
             document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
