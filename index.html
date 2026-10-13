@@ -35,7 +35,7 @@
         <div class="px-6 mb-5">
             <div class="flex bg-scout-card rounded-2xl p-4 items-center focus-within:ring-1 focus-within:ring-scout-neon transition shadow-md">
                 <i class="fa-solid fa-magnifying-glass text-zinc-400 text-lg mr-3"></i>
-                <input type="text" id="aiSearchInput" placeholder="What are you hunting for?" class="w-full bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none" onkeypress="if(event.key === 'Enter') triggerAISearch()" />
+                <input type="text" id="aiSearchInput" placeholder="e.g. 'I'm looking for a green chair'" class="w-full bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none" onkeypress="if(event.key === 'Enter') triggerAISearch()" />
             </div>
         </div>
 
@@ -113,16 +113,7 @@
             const { data: items } = await db.from('items').select('*');
             if (!items || items.length === 0) { window.location.href = 'swipe.html'; return; }
 
-            const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
-            const interests = profile.interests ? profile.interests.split(',').map(i => i.trim().toLowerCase()) : ['cars', 'tools', 'wood'];
-
-            const matchedItems = items.filter(item => {
-                const title = (item.title || '').toLowerCase();
-                return interests.some(interest => title.includes(interest));
-            });
-
-            const pool = (matchedItems.length > 0) ? matchedItems : items;
-            const randomItem = pool[Math.floor(Math.random() * pool.length)];
+            const randomItem = items[Math.floor(Math.random() * items.length)];
             const searchKeyword = randomItem ? randomItem.title.split(' ')[0] : '';
             window.location.href = `swipe.html?q=${encodeURIComponent(searchKeyword)}`;
         }
