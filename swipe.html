@@ -18,6 +18,7 @@
 <body class="text-white font-sans antialiased">
     <div class="phone-container">
         
+        <!-- HEADER -->
         <header class="flex justify-between items-center px-6 pt-8 pb-4 z-20 shrink-0">
             <button onclick="window.location.href='index.html'" class="text-zinc-400 hover:text-white text-2xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="text-center">
@@ -30,34 +31,36 @@
             </a>
         </header>
 
+        <!-- SWIPE CARD CONTAINER -->
         <main class="px-6 py-2 flex-grow relative flex items-center justify-center overflow-hidden">
             <div id="cardDeck" class="w-full h-full max-h-[550px] relative flex items-center justify-center">
                 <div class="text-center text-zinc-500 text-sm">
                     <i class="fa-solid fa-spinner fa-spin text-3xl text-scout-neon mb-3 block"></i>
-                    Loading listings...
+                    Loading database deck...
                 </div>
             </div>
 
-            <!-- PAYWALL MODAL -->
+            <!-- 49P PAYWALL MODAL -->
             <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center space-y-6 hidden">
                 <div class="w-20 h-20 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-4xl shadow-lg">
                     <i class="fa-solid fa-heart-circle-bolt"></i>
                 </div>
                 <div class="space-y-2">
-                    <h2 class="text-2xl font-black text-white">Swipe Limit Reached</h2>
-                    <p class="text-sm text-zinc-400 px-4">You can keep swiping left for free, but liking this item requires 1 extra slot for 49p.</p>
+                    <h2 class="text-2xl font-black text-white">Right Swipe Limit Reached</h2>
+                    <p class="text-sm text-zinc-400 px-4">You can keep swiping left for free, but liking this item requires 1 extra right-swipe slot for 49p[cite: 14].</p>
                 </div>
                 <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center space-x-2 cursor-pointer">
-                    <span>Unlock 1 Swipe for 49p</span>
+                    <span>Unlock 1 Extra Right Swipe for 49p</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
                 <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-scout-card hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-4 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
-                    No thanks, swipe left instead
+                    No thanks, swipe left instead[cite: 14]
                 </button>
                 <a href="finds.html" class="text-xs text-zinc-500 hover:text-white underline pt-2 block">View Saved Finds Basket</a>
             </div>
         </main>
 
+        <!-- SWIPE ACTION BUTTONS -->
         <footer class="px-6 pb-6 pt-2 z-20 shrink-0">
             <div class="flex justify-center items-center space-x-8">
                 <button onclick="swipeAction('left')" class="w-16 h-16 bg-scout-card hover:bg-zinc-800 text-red-400 border border-zinc-800 rounded-full flex items-center justify-center text-2xl shadow-lg transition active:scale-95 cursor-pointer">
@@ -68,6 +71,27 @@
                 </button>
             </div>
         </footer>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="w-full h-16 bg-scout-dark border-t border-zinc-900 flex justify-around items-center px-4 shrink-0">
+            <a href="index.html" class="flex flex-col items-center space-y-0.5 text-scout-neon">
+                <i class="fa-solid fa-compass text-base"></i>
+                <span class="text-[9px] font-bold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-regular fa-heart text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-regular fa-user text-base"></i>
+                <span class="text-[9px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
     </div>
 
     <script>
@@ -77,39 +101,44 @@
 
         let items = [];
         let currentIndex = 0;
-        let rightSwipeLimit = 5;
+        let rightSwipeLimit = 5; 
         let savedFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
         document.getElementById('findsBadge').innerText = savedFinds.length;
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const searchQuery = urlParams.get('q');
-
         async function loadDeck() {
+            // Pulls ALL items from Supabase without single-item query bottlenecks
             const { data, error } = await db.from('items').select('*');
             if (error || !data || data.length === 0) {
                 document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
                 return;
             }
 
-            if (searchQuery) {
-                items = data.filter(item => item.title.toLowerCase().includes(searchQuery.toLowerCase()));
-                if(items.length === 0) {
-                    document.getElementById('cardDeck').innerHTML = `<div class="text-center text-zinc-500"><p class="mb-4">No exact matches for "${searchQuery}".</p><button onclick="window.location.href='index.html'" class="text-scout-neon underline text-sm font-bold">Go Back</button></div>`;
-                    return;
-                }
-            } else {
-                items = data.sort(() => Math.random() - 0.5);
-            }
-            
+            // Shuffle all database items into a random stack
+            items = data.sort(() => Math.random() - 0.5);
             currentIndex = 0;
             renderCard();
         }
 
         function renderCard() {
             const deckContainer = document.getElementById('cardDeck');
+
+            // Prevent infinite loops by showing an end state when the stack runs out
             if (currentIndex >= items.length) {
-                items = items.sort(() => Math.random() - 0.5);
-                currentIndex = 0;
+                deckContainer.innerHTML = `
+                    <div class="text-center space-y-4">
+                        <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
+                            <i class="fa-solid fa-ghost"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-white font-black text-lg">You've seen it all!</h3>
+                            <p class="text-zinc-500 text-xs">No more bargains left in this deck.</p>
+                        </div>
+                        <button onclick="window.location.href='index.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition">
+                            Back to Discover
+                        </button>
+                    </div>
+                `;
+                return;
             }
 
             document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
@@ -135,6 +164,7 @@
                     </div>
                 </div>
             `;
+
             initTouchGestures();
         }
 
@@ -147,6 +177,7 @@
                     document.getElementById('paywallOverlay').classList.remove('hidden');
                     return;
                 }
+
                 const item = items[currentIndex];
                 if (!savedFinds.some(f => f.title === item.title)) {
                     savedFinds.push(item);
@@ -158,13 +189,17 @@
                 card.style.transform = 'translateX(-120deg) rotate(-20deg)';
             }
             card.style.opacity = '0';
-            setTimeout(() => { currentIndex++; renderCard(); }, 250);
+
+            setTimeout(() => {
+                currentIndex++;
+                renderCard();
+            }, 250);
         }
 
         window.unlockMoreRightSwipe = function() {
             if (confirm("Confirm 49p payment for 1 extra right-swipe slot?")) {
-                rightSwipeLimit += 1;
-                document.getElementById('paywallOverlay').classList.add('hidden');
+                rightSwipeLimit += 1; 
+                document.getElementById('paywallOverlay').classList.add('hidden'); 
                 
                 const item = items[currentIndex];
                 if (!savedFinds.some(f => f.title === item.title)) {
@@ -172,9 +207,17 @@
                     localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
                     document.getElementById('findsBadge').innerText = savedFinds.length;
                 }
+
                 const card = document.getElementById('activeSwipeCard');
-                if (card) { card.style.transform = 'translateX(120deg) rotate(20deg)'; card.style.opacity = '0'; }
-                setTimeout(() => { currentIndex++; renderCard(); }, 250);
+                if (card) {
+                    card.style.transform = 'translateX(120deg) rotate(20deg)';
+                    card.style.opacity = '0';
+                }
+
+                setTimeout(() => {
+                    currentIndex++;
+                    renderCard();
+                }, 250);
             }
         }
 
@@ -186,17 +229,27 @@
         function initTouchGestures() {
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
-            let startX = 0, currentX = 0;
-            card.addEventListener('touchstart', (e) => { startX = e.touches[0].clientX; }, { passive: true });
+
+            let startX = 0;
+            let currentX = 0;
+
+            card.addEventListener('touchstart', (e) => {
+                startX = e.touches[0].clientX;
+            }, { passive: true });
+
             card.addEventListener('touchmove', (e) => {
                 currentX = e.touches[0].clientX;
                 const diff = currentX - startX;
                 card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
             }, { passive: true });
+
             card.addEventListener('touchend', (e) => {
                 const diff = currentX - startX;
-                if (Math.abs(diff) > 100) swipeAction(diff > 0 ? 'right' : 'left');
-                else card.style.transform = 'translateX(0) rotate(0)';
+                if (Math.abs(diff) > 100) {
+                    swipeAction(diff > 0 ? 'right' : 'left');
+                } else {
+                    card.style.transform = 'translateX(0) rotate(0)';
+                }
             });
         }
 
