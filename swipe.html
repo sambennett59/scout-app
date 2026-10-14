@@ -23,7 +23,7 @@
             <button onclick="window.location.href='index.html'" class="text-zinc-400 hover:text-white text-2xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
             <div class="text-center">
                 <h1 class="text-xs font-black tracking-widest text-scout-neon uppercase" id="deckHeaderTitle">DISCOVER DECK</h1>
-                <span class="text-[10px] text-zinc-400 font-semibold" id="cardCounter">Right Swipes: 0 of 5</span>
+                <span class="text-[10px] text-zinc-400 font-semibold" id="cardCounter">Daily Swipes: 0 of 5</span>
             </div>
             <a href="finds.html" class="relative text-zinc-400 hover:text-white text-2xl">
                 <i class="fa-solid fa-heart"></i>
@@ -46,8 +46,8 @@
                     <i class="fa-solid fa-heart-circle-bolt"></i>
                 </div>
                 <div class="space-y-1">
-                    <h2 class="text-xl font-black text-white">Right Swipe Limit Reached</h2>
-                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot to continue liking items.</p>
+                    <h2 class="text-xl font-black text-white">Daily Right Swipe Limit Reached</h2>
+                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot for today to continue liking items.</p>
                 </div>
                 
                 <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
@@ -108,13 +108,24 @@
 
         let items = [];
         let currentIndex = 0;
+
+        // AUTOMATIC DAILY RESET (Midnight rollover check)
+        const todayStr = new Date().toISOString().split('T')[0];
+        let lastSwipeDate = localStorage.getItem('scout_last_swipe_date');
+
+        if (lastSwipeDate !== todayStr) {
+            localStorage.setItem('scout_last_swipe_date', todayStr);
+            localStorage.setItem('scout_total_swipes', '0');
+            localStorage.setItem('scout_right_limit', '5'); // Reset back to 5 free daily swipes
+        }
+
         let rightSwipeLimit = parseInt(localStorage.getItem('scout_right_limit') || '5');
         let totalRightSwipes = parseInt(localStorage.getItem('scout_total_swipes') || '0');
         
         function updateUI() {
             let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
             document.getElementById('findsBadge').innerText = currentFinds.length;
-            document.getElementById('cardCounter').innerText = `Right Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
+            document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
         }
         updateUI();
 
@@ -314,7 +325,7 @@
         }
 
         window.unlockMoreRightSwipe = function() {
-            if (confirm("Confirm 49p payment for 1 extra right-swipe slot?")) {
+            if (confirm("Confirm 49p payment for 1 extra daily right-swipe slot?")) {
                 rightSwipeLimit += 1;
                 localStorage.setItem('scout_right_limit', rightSwipeLimit);
                 document.getElementById('paywallOverlay').classList.add('hidden'); 

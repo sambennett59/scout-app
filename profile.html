@@ -140,6 +140,10 @@
                     <i class="fa-solid fa-trash-can"></i>
                     <span>Clear Cache & Temp Data</span>
                 </button>
+                <button onclick="devHardReset()" class="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
+                    <i class="fa-solid fa-triangle-exclamation"></i>
+                    <span>Dev Hard Reset (Wipe All Limits)</span>
+                </button>
             </div>
 
         </main>
@@ -297,28 +301,34 @@
             window.location.href = 'setup.html';
         }
 
-        // SECURE CACHE CLEAR: Preserves paywalls, swipe limits, and account upload counts!
+        // SECURE CACHE CLEAR: Clears cache while protecting monetization quotas
         window.clearLocalStorage = function() {
-            if (confirm("Clear temporary cache and local viewing data? Your account quotas, swipe limits, and active broadcasts remain protected.")) {
-                // Keep monetized/quota keys intact
+            if (confirm("Clear temporary cache and local viewing data? Your account quotas, monthly upload counts, and daily swipe limits remain protected.")) {
                 const preservedKeys = {};
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key.includes('scout_right_limit') || key.includes('scout_total_swipes') || key.includes('scout_upload_count') || key.includes('scout_my_uploads')) {
+                    if (key.includes('scout_right_limit') || key.includes('scout_total_swipes') || key.includes('scout_last_swipe_date') || key.includes('scout_upload_count') || key.includes('scout_upload_month') || key.includes('scout_my_uploads')) {
                         preservedKeys[key] = localStorage.getItem(key);
                     }
                 }
 
-                // Clear general cache
                 localStorage.clear();
 
-                // Restore protected keys
                 for (const [key, value] of Object.entries(preservedKeys)) {
                     localStorage.setItem(key, value);
                 }
 
                 alert("Cache cleared successfully. Account paywall quotas are locked and secure.");
                 location.reload();
+            }
+        }
+
+        // DEV HARD RESET: Wipes everything including paywalls for testing
+        window.devHardReset = function() {
+            if (confirm("DEVELOPER RESET: Are you sure you want to completely wipe all limits, swipe counts, and profile cache for testing?")) {
+                localStorage.clear();
+                alert("All local storage wiped clean for testing!");
+                window.location.href = 'setup.html';
             }
         }
 

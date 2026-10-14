@@ -35,7 +35,7 @@
         <main class="px-6 py-4 flex-grow space-y-6">
             <div class="mb-2">
                 <h2 class="text-2xl font-black text-white">Share a Bargain</h2>
-                <p class="text-xs text-zinc-400 mt-1">First 20 listings on your account are free. Thereafter 49p per listing.</p>
+                <p class="text-xs text-zinc-400 mt-1">First 20 listings per month on your account are free. Thereafter 49p per listing.</p>
             </div>
 
             <!-- FORM CONTAINER -->
@@ -86,14 +86,14 @@
                 </button>
             </div>
 
-            <!-- UPLOAD PAYWALL MODAL (EXCEEDING 20 FREE ACCOUNT LIMIT) -->
+            <!-- UPLOAD PAYWALL MODAL (EXCEEDING 20 MONTHLY FREE LIMIT) -->
             <div id="uploadPaywallModal" class="fixed inset-0 bg-[#121214]/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                 <div class="w-16 h-16 bg-[#bcf53f]/10 border-2 border-[#bcf53f]/30 text-[#bcf53f] rounded-3xl flex items-center justify-center text-3xl shadow-lg">
                     <i class="fa-solid fa-store-slash"></i>
                 </div>
                 <div class="space-y-1">
-                    <h2 class="text-xl font-black text-white">Account Listing Limit Reached</h2>
-                    <p class="text-xs text-zinc-400 px-2">You have published 20 free listings on this account. Pay 49p to broadcast this listing.</p>
+                    <h2 class="text-xl font-black text-white">Monthly Account Limit Reached</h2>
+                    <p class="text-xs text-zinc-400 px-2">You have published 20 free listings this month. Pay 49p to broadcast this listing.</p>
                 </div>
                 <button onclick="payForListing()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs cursor-pointer">
                     Pay 49p & Publish Listing
@@ -131,16 +131,24 @@
         const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        // Fetch user profile session for account-scoped tracking
         const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
         const userEmail = profile.email || 'anonymous_user@scout.local';
 
+        // AUTOMATIC MONTHLY RESET (Flips fresh on the 1st of every month)
+        const currentMonthStr = new Date().toISOString().substring(0, 7); // e.g. "2026-10"
+        const monthKey = `scout_upload_month_${userEmail}`;
         const userUploadKey = `scout_upload_count_${userEmail}`;
         const userListingsKey = `scout_my_uploads_${userEmail}`;
 
+        let savedMonth = localStorage.getItem(monthKey);
+        if (savedMonth !== currentMonthStr) {
+            localStorage.setItem(monthKey, currentMonthStr);
+            localStorage.setItem(userUploadKey, '0');
+        }
+
         let uploadCount = parseInt(localStorage.getItem(userUploadKey) || '0');
-        const freeLimit = 20;
-        document.getElementById('uploadCounterBadge').innerText = `Uploads: ${uploadCount}/${freeLimit}`;
+        const monthlyLimit = 20;
+        document.getElementById('uploadCounterBadge').innerText = `Uploads: ${uploadCount}/${monthlyLimit} (This Month)`;
 
         const publishBtn = document.getElementById('publishBtn');
 
@@ -156,15 +164,15 @@
                 return;
             }
 
-            // PER-USER DUPLICATE CHECK (Only blocks exact duplicate titles on THIS user's account)
+            // PER-USER DUPLICATE CHECK
             let userUploads = JSON.parse(localStorage.getItem(userListingsKey) || '[]');
             if (userUploads.some(u => u.toLowerCase() === title.toLowerCase())) {
                 alert("Duplicate block: You have already listed an item with this title on your account. Please use a unique title.");
                 return;
             }
 
-            // Check 20 free account listing limit
-            if (uploadCount >= freeLimit) {
+            // Check 20 monthly free account limit
+            if (uploadCount >= monthlyLimit) {
                 document.getElementById('uploadPaywallModal').classList.remove('hidden');
                 return;
             }
@@ -173,7 +181,7 @@
         });
 
         window.payForListing = function() {
-            if (confirm("Confirm 49p payment for extra listing slot on your account?")) {
+            if (confirm("Confirm 49p payment for extra monthly listing slot on your account?")) {
                 document.getElementById('uploadPaywallModal').classList.add('hidden');
                 executeUpload();
             }
@@ -223,7 +231,7 @@
                 image_url: imageUrl,
                 external_link,
                 user_email: userEmail,
-                is_restricted: isAgeRestricted, // 18+ filter flag
+                is_restricted: isAgeRestricted,
                 embedding: null,
                 created_at: new Date().toISOString()
             };
