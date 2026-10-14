@@ -110,74 +110,80 @@
             const searchQuery = urlParams.get('q');
             const mode = urlParams.get('mode');
 
-            const { data, error } = await db.from('items').select('*');
-            if (error || !data || data.length === 0) {
-                document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
-                return;
-            }
-
-            items = data;
-
             if (searchQuery) {
                 document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
-                const queryLower = searchQuery.toLowerCase();
+                document.getElementById('cardDeck').innerHTML = `
+                    <div class="text-center text-zinc-500 text-sm">
+                        <i class="fa-solid fa-brain fa-pulse text-3xl text-scout-neon mb-3 block"></i>
+                        AI is finding related bargains...
+                    </div>
+                `;
 
-                // Expanded semantic concept maps so category/broad searches catch specific items
-                const conceptMap = {
-                    'toy': ['t-rex', 'trex', 'dinosaur', 'game', 'play', 'lego', 'doll', 'figure'],
-                    'car': ['exhaust', 'bmw', 'ford', 'engine', 'wheel', 'brake', 's-max', 'touring', 'm47', 'vehicle', 'parts'],
-                    'dinosaur': ['t-rex', 'trex', 'toy', 'figure'],
-                    'chair': ['seat', 'stool', 'furniture', 'bench', 'sofa'],
-                    'vacuum': ['dyson', 'vax', 'shark', 'henry', 'cleaner', 'carpet'],
-                    'tool': ['bench', 'saw', 'drill', 'workshop', 'hammer', 'equipment']
-                };
+                try {
+                    // Request embedding mapping from Supabase using uppercase GET_EMBEDDING
+                    const { data: embedData, error: embedCallError } = await db.functions.invoke('GET_EMBEDDING', {
+                        body: { text: searchQuery }
+                    });
 
-                // Extract individual words, stripping standard conversational filler
-                const stopWords = ['im', 'i', 'am', 'looking', 'for', 'a', 'an', 'the', 'some', 'please', 'can', 'you', 'find', 'i\'m', 'need'];
-                const searchWords = queryLower.split(/\s+/).filter(word => !stopWords.includes(word));
-
-                // Gather all active matching terms including synonyms/concepts
-                let activeKeywords = [...searchWords, queryLower];
-                for (const [key, synonyms] of Object.entries(conceptMap)) {
-                    if (queryLower.includes(key)) {
-                        activeKeywords = activeKeywords.concat(synonyms);
+                    if (embedCallError || !embedData || !embedData.embedding) {
+                        showNoMatches(searchQuery);
+                        return;
                     }
-                }
 
-                // Filter items where ANY word or concept matches the title, description, or category
-                items = data.filter(item => {
-                    const searchableText = `${item.title} ${item.description || ''} ${item.category || ''}`.toLowerCase();
-                    return activeKeywords.some(keyword => searchableText.includes(keyword));
-                });
+                    const { data: matchedItems, error } = await db.rpc('match_items', {
+                        query_embedding: embedData.embedding,
+                        match_threshold: -0.5, 
+                        match_count: 50
+                    });
 
-                if (items.length === 0) {
-                    document.getElementById('cardDeck').innerHTML = `
-                        <div class="text-center space-y-4">
-                            <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
-                                <i class="fa-solid fa-ghost"></i>
-                            </div>
-                            <div>
-                                <h3 class="text-white font-black text-lg">No matches found</h3>
-                                <p class="text-zinc-500 text-xs">Nothing related to "${searchQuery}" found.</p>
-                            </div>
-                            <button onclick="window.location.href='swipe.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
-                                View Full Deck
-                            </button>
-                        </div>
-                    `;
+                    if (error || !matchedItems || matchedItems.length === 0) {
+                        showNoMatches(searchQuery);
+                        return;
+                    }
+                    
+                    items = matchedItems;
+                    currentIndex = 0;
+                } catch (e) {
+                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">Error connecting to AI Search.</div>`;
                     return;
                 }
-                currentIndex = 0;
-            } else if (mode === 'surprise') {
-                document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
-                const surpriseId = sessionStorage.getItem('scout_surprise_id');
-                const foundIndex = items.findIndex(i => String(i.id) === String(surpriseId));
-                currentIndex = foundIndex !== -1 ? foundIndex : Math.floor(Math.random() * items.length);
+
             } else {
-                currentIndex = 0;
+                const { data, error } = await db.from('items').select('*');
+                if (error || !data || data.length === 0) {
+                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+                    return;
+                }
+                items = data;
+                
+                if (mode === 'surprise') {
+                    document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
+                    const surpriseId = sessionStorage.getItem('scout_surprise_id');
+                    const foundIndex = items.findIndex(i => String(i.id) === String(surpriseId));
+                    currentIndex = foundIndex !== -1 ? foundIndex : Math.floor(Math.random() * items.length);
+                } else {
+                    currentIndex = 0;
+                }
             }
 
             renderCard();
+        }
+
+        function showNoMatches(searchQuery) {
+            document.getElementById('cardDeck').innerHTML = `
+                <div class="text-center space-y-4">
+                    <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
+                        <i class="fa-solid fa-ghost"></i>
+                    </div>
+                    <div>
+                        <h3 class="text-white font-black text-lg">No matches found</h3>
+                        <p class="text-zinc-500 text-xs">Nothing related to "${searchQuery}" found.</p>
+                    </div>
+                    <button onclick="window.location.href='swipe.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
+                        View Full Deck
+                    </button>
+                </div>
+            `;
         }
 
         function renderCard() {
@@ -215,10 +221,10 @@
                     <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark">
                         <div class="space-y-1">
                             <h2 class="text-lg font-black text-white leading-snug line-clamp-2">${item.title}</h2>
-                            <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location || 'Crediton, Devon'}</p>
+                            <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location}</p>
                         </div>
                         <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
-                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Match</span>
+                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> AI Match</span>
                             <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
                         </div>
                     </div>

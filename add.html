@@ -126,9 +126,24 @@
             const formattedPrice = `£${parseFloat(rawPrice).toFixed(2)}`;
             const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : formattedPrice;
 
-            publishBtn.innerText = "Uploading Image to Cloud...";
+            publishBtn.innerText = "Generating AI Concept Tags...";
             publishBtn.disabled = true;
 
+            // Securely calls Supabase Edge Function using uppercase GET_EMBEDDING
+            let itemEmbedding = null;
+            try {
+                const searchText = `${title} ${location} ${finalPrice}`;
+                const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
+                    body: { text: searchText }
+                });
+                if (!embedError && embedData) {
+                    itemEmbedding = embedData.embedding;
+                }
+            } catch (e) {
+                console.error("Embedding generation warning:", e);
+            }
+
+            publishBtn.innerText = "Uploading Image...";
             let imageUrl = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
 
             if (imageFileInput.files && imageFileInput.files[0]) {
@@ -136,22 +151,18 @@
                 const fileExt = file.name.split('.').pop();
                 const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
                 
-                const { data: uploadData, error: uploadError } = await db.storage
+                const { error: uploadError } = await db.storage
                     .from('item-images')
                     .upload(fileName, file);
 
                 if (uploadError) {
-                    console.error("Storage upload error:", uploadError);
                     alert("Image upload failed: " + uploadError.message);
                     publishBtn.innerText = "Launch to Swipe Deck 🚀";
                     publishBtn.disabled = false;
                     return;
                 }
 
-                const { data: publicUrlData } = db.storage
-                    .from('item-images')
-                    .getPublicUrl(fileName);
-
+                const { data: publicUrlData } = db.storage.from('item-images').getPublicUrl(fileName);
                 imageUrl = publicUrlData.publicUrl;
             }
 
@@ -164,18 +175,18 @@
                 image_url: imageUrl,
                 external_link,
                 user_email: userEmail,
+                embedding: itemEmbedding,
                 created_at: new Date().toISOString()
             };
 
             const { error: insertError } = await db.from('items').insert([newItem]);
 
             if (insertError) {
-                console.error("Supabase insert error:", insertError);
                 alert("Error saving listing: " + insertError.message);
                 publishBtn.innerText = "Launch to Swipe Deck 🚀";
                 publishBtn.disabled = false;
             } else {
-                alert("Bargain launched successfully to cloud storage!");
+                alert("Bargain launched successfully!");
                 window.location.href = 'swipe.html';
             }
         });
