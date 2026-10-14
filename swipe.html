@@ -120,12 +120,19 @@
                 `;
 
                 try {
-                    // Request embedding mapping from Supabase using uppercase GET_EMBEDDING
-                    const { data: embedData, error: embedCallError } = await db.functions.invoke('GET_EMBEDDING', {
-                        body: { text: searchQuery }
+                    // Securely fetch query embedding from Supabase backend function
+                    const res = await fetch(`${supabaseUrl}/functions/v1/GET_EMBEDDING`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'Authorization': `Bearer ${supabaseKey}`
+                        },
+                        body: JSON.stringify({ text: searchQuery })
                     });
 
-                    if (embedCallError || !embedData || !embedData.embedding) {
+                    const embedData = await res.json();
+
+                    if (!embedData || !embedData.embedding) {
                         showNoMatches(searchQuery);
                         return;
                     }

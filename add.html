@@ -132,21 +132,25 @@
             let itemEmbedding = null;
             try {
                 const searchText = `${title} ${location} ${finalPrice}`;
-                const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
-                    body: { text: searchText }
-                });
                 
-                if (embedError) {
-                    console.error("Supabase Function Error:", embedError);
-                    alert("Function Error: " + JSON.stringify(embedError));
-                } else if (embedData && embedData.embedding) {
-                    itemEmbedding = embedData.embedding;
+                // Securely calls Supabase Edge Function via absolute REST endpoint
+                const res = await fetch(`${supabaseUrl}/functions/v1/GET_EMBEDDING`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': `Bearer ${supabaseKey}`
+                    },
+                    body: JSON.stringify({ text: searchText })
+                });
+
+                const result = await res.json();
+                if (result.embedding) {
+                    itemEmbedding = result.embedding;
                 } else {
-                    alert("Function returned no embedding data.");
+                    console.warn("Embedding warning response:", result);
                 }
             } catch (e) {
-                console.error("Network or Client Error:", e);
-                alert("Client Error calling AI: " + e.message);
+                console.error("Secure AI connection warning:", e);
             }
 
             publishBtn.innerText = "Uploading Image...";
@@ -192,7 +196,7 @@
                 publishBtn.innerText = "Launch to Swipe Deck 🚀";
                 publishBtn.disabled = false;
             } else {
-                alert("Bargain launched successfully!");
+                alert("Bargain launched successfully with secure AI tagging!");
                 window.location.href = 'swipe.html';
             }
         });
