@@ -50,13 +50,11 @@
                     <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot to continue liking items.</p>
                 </div>
                 
-                <!-- Option 1: Pay 49p -->
                 <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
                     <span>Unlock 1 Extra Swipe for 49p</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
 
-                <!-- Option 2: Watch Ad for Free Swipe -->
                 <button onclick="watchAdForExtraSwipe()" class="w-full bg-scout-card hover:bg-zinc-800 text-scout-neon font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-scout-neon/30 transition text-xs cursor-pointer flex items-center justify-center space-x-2">
                     <i class="fa-solid fa-play"></i>
                     <span>Watch a short ad for 1 free swipe</span>
@@ -230,15 +228,26 @@
 
             updateUI();
             const item = items[currentIndex];
+            const isRestricted = item.is_restricted === true;
 
             deckContainer.innerHTML = `
                 <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
-                    <div class="relative w-full h-[65%] bg-zinc-900">
-                        <img src="${item.image_url}" class="w-full h-full object-cover" />
-                        <span class="absolute top-4 left-4 bg-scout-dark/80 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg">
+                    <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden">
+                        <img id="cardImage" src="${item.image_url}" class="w-full h-full object-cover transition duration-300 ${isRestricted ? 'filter blur-2xl scale-110' : ''}" />
+                        
+                        <span class="absolute top-4 left-4 bg-scout-dark/80 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg z-10">
                             ${item.price}
                         </span>
+
+                        ${isRestricted ? `
+                            <div id="blurWarningOverlay" onclick="revealRestrictedContent(event)" class="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center cursor-pointer z-20">
+                                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-3xl mb-2"></i>
+                                <h3 class="text-white font-black text-sm uppercase tracking-wide">18+ Restricted Content</h3>
+                                <p class="text-zinc-400 text-[10px] mt-1">Tobacco / Age-Restricted. Tap anywhere to reveal image.</p>
+                            </div>
+                        ` : ''}
                     </div>
+
                     <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark">
                         <div class="space-y-1">
                             <h2 class="text-lg font-black text-white leading-snug line-clamp-2">${item.title}</h2>
@@ -255,26 +264,38 @@
             initTouchGestures();
         }
 
+        window.revealRestrictedContent = function(e) {
+            e.stopPropagation();
+            const img = document.getElementById('cardImage');
+            const overlay = document.getElementById('blurWarningOverlay');
+            if (img) img.classList.remove('filter', 'blur-2xl', 'scale-110');
+            if (overlay) overlay.style.display = 'none';
+        }
+
         window.swipeAction = function(direction) {
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
 
             if (direction === 'right') {
-                const item = items[currentIndex];
+                const currentItem = items[currentIndex];
+                const likedItem = {
+                    title: currentItem.title || 'Untitled Item',
+                    price: currentItem.price || '£0.00',
+                    location: currentItem.location || 'Local',
+                    image_url: currentItem.image_url || '',
+                    external_link: currentItem.external_link || '#'
+                };
 
-                // 1. Immediately save item to basket matching finds.html expectations
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                if (!currentFinds.some(f => f.title === item.title)) {
-                    currentFinds.push(item);
+                if (!currentFinds.some(f => f.title === likedItem.title)) {
+                    currentFinds.push(likedItem);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                 }
 
-                // 2. Increment total swipes count
                 totalRightSwipes++;
                 localStorage.setItem('scout_total_swipes', totalRightSwipes);
                 updateUI();
 
-                // 3. If we've exceeded the limit, show paywall modal
                 if (totalRightSwipes > rightSwipeLimit) {
                     document.getElementById('paywallOverlay').classList.remove('hidden');
                     return; 
@@ -299,9 +320,16 @@
                 document.getElementById('paywallOverlay').classList.add('hidden'); 
                 
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                const item = items[currentIndex];
-                if (!currentFinds.some(f => f.title === item.title)) {
-                    currentFinds.push(item);
+                const currentItem = items[currentIndex];
+                const likedItem = {
+                    title: currentItem.title || 'Untitled Item',
+                    price: currentItem.price || '£0.00',
+                    location: currentItem.location || 'Local',
+                    image_url: currentItem.image_url || '',
+                    external_link: currentItem.external_link || '#'
+                };
+                if (!currentFinds.some(f => f.title === likedItem.title)) {
+                    currentFinds.push(likedItem);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                 }
 
@@ -330,9 +358,16 @@
                 document.getElementById('paywallOverlay').classList.add('hidden');
 
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                const item = items[currentIndex];
-                if (!currentFinds.some(f => f.title === item.title)) {
-                    currentFinds.push(item);
+                const currentItem = items[currentIndex];
+                const likedItem = {
+                    title: currentItem.title || 'Untitled Item',
+                    price: currentItem.price || '£0.00',
+                    location: currentItem.location || 'Local',
+                    image_url: currentItem.image_url || '',
+                    external_link: currentItem.external_link || '#'
+                };
+                if (!currentFinds.some(f => f.title === likedItem.title)) {
+                    currentFinds.push(likedItem);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                 }
 
