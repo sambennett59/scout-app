@@ -260,14 +260,7 @@
             if (!card) return;
 
             if (direction === 'right') {
-                if (totalRightSwipes >= rightSwipeLimit) {
-                    document.getElementById('paywallOverlay').classList.remove('hidden');
-                    return; 
-                }
-
-                totalRightSwipes++;
-                localStorage.setItem('scout_total_swipes', totalRightSwipes);
-
+                // 1. Immediately save item to basket
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
                 if (!currentFinds.some(f => f.title === item.title)) {
@@ -275,7 +268,17 @@
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                 }
 
+                // 2. Increment total swipes count
+                totalRightSwipes++;
+                localStorage.setItem('scout_total_swipes', totalRightSwipes);
                 updateUI();
+
+                // 3. If we've exceeded the limit, show paywall modal
+                if (totalRightSwipes > rightSwipeLimit) {
+                    document.getElementById('paywallOverlay').classList.remove('hidden');
+                    return; 
+                }
+
                 card.style.transform = 'translateX(400px) rotate(20deg)';
             } else {
                 card.style.transform = 'translateX(-400px) rotate(-20deg)';
