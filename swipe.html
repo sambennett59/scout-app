@@ -107,9 +107,27 @@
 
         async function loadDeck() {
             const urlParams = new URLSearchParams(window.location.search);
-            const searchQuery = urlParams.get('q');
             const mode = urlParams.get('mode');
+            const searchQuery = urlParams.get('q');
 
+            // 1. SURPRISE ME MODE: Fetch everything and shuffle randomly
+            if (mode === 'surprise') {
+                document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
+                const { data, error } = await db.from('items').select('*');
+                
+                if (error || !data || data.length === 0) {
+                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+                    return;
+                }
+                
+                items = data.sort(() => Math.random() - 0.5);
+                currentIndex = 0;
+                
+                renderCard();
+                return;
+            }
+
+            // 2. AI SEARCH QUERY MODE
             if (searchQuery) {
                 document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
                 document.getElementById('cardDeck').innerHTML = `
@@ -146,25 +164,18 @@
                     document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">Error connecting to AI Search.</div>`;
                     return;
                 }
-
-            } else {
-                const { data, error } = await db.from('items').select('*');
-                if (error || !data || data.length === 0) {
-                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
-                    return;
-                }
-                items = data;
-                
-                if (mode === 'surprise') {
-                    document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
-                    const surpriseId = sessionStorage.getItem('scout_surprise_id');
-                    const foundIndex = items.findIndex(i => String(i.id) === String(surpriseId));
-                    currentIndex = foundIndex !== -1 ? foundIndex : Math.floor(Math.random() * items.length);
-                } else {
-                    currentIndex = 0;
-                }
+                renderCard();
+                return;
             }
 
+            // 3. DEFAULT FULL DECK MODE
+            const { data, error } = await db.from('items').select('*');
+            if (error || !data || data.length === 0) {
+                document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+                return;
+            }
+            items = data;
+            currentIndex = 0;
             renderCard();
         }
 
