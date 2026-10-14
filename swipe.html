@@ -40,23 +40,32 @@
                 </div>
             </div>
 
-            <!-- 49P PAYWALL MODAL -->
-            <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center space-y-6 hidden">
-                <div class="w-20 h-20 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-4xl shadow-lg">
+            <!-- PAYWALL MODAL (49p OR WATCH AD) -->
+            <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-50 flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
+                <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg">
                     <i class="fa-solid fa-heart-circle-bolt"></i>
                 </div>
-                <div class="space-y-2">
-                    <h2 class="text-2xl font-black text-white">Right Swipe Limit Reached</h2>
-                    <p class="text-sm text-zinc-400 px-4">You can keep swiping left for free, but liking this item requires 1 extra right-swipe slot for 49p.</p>
+                <div class="space-y-1">
+                    <h2 class="text-xl font-black text-white">Right Swipe Limit Reached</h2>
+                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot to save this item to your basket.</p>
                 </div>
-                <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-sm flex items-center justify-center space-x-2 cursor-pointer">
-                    <span>Unlock 1 Extra Right Swipe for 49p</span>
+                
+                <!-- Option 1: Pay 49p -->
+                <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
+                    <span>Unlock 1 Extra Swipe for 49p</span>
                     <i class="fa-solid fa-arrow-right"></i>
                 </button>
-                <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-scout-card hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-4 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
+
+                <!-- Option 2: Watch Ad for Free Swipe -->
+                <button onclick="watchAdForExtraSwipe()" class="w-full bg-scout-card hover:bg-zinc-800 text-scout-neon font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-scout-neon/30 transition text-xs cursor-pointer flex items-center justify-center space-x-2">
+                    <i class="fa-solid fa-play"></i>
+                    <span>Watch a short ad for 1 free swipe</span>
+                </button>
+
+                <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-scout-card hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
                     No thanks, swipe left instead
                 </button>
-                <a href="finds.html" class="text-xs text-zinc-500 hover:text-white underline pt-2 block">View Saved Finds Basket</a>
+                <a href="finds.html" class="text-xs text-zinc-500 hover:text-white underline pt-1 block">View Saved Finds Basket</a>
             </div>
         </main>
 
@@ -110,7 +119,7 @@
             const mode = urlParams.get('mode');
             const searchQuery = urlParams.get('q');
 
-            // 1. SURPRISE ME MODE: Fetch everything and shuffle randomly
+            // 1. SURPRISE ME MODE: Pure database fetch, shuffled randomly
             if (mode === 'surprise') {
                 document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
                 const { data, error } = await db.from('items').select('*');
@@ -122,12 +131,11 @@
                 
                 items = data.sort(() => Math.random() - 0.5);
                 currentIndex = 0;
-                
                 renderCard();
                 return;
             }
 
-            // 2. AI SEARCH QUERY MODE
+            // 2. AI SEARCH QUERY MODE (Main Search Bar)
             if (searchQuery) {
                 document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
                 document.getElementById('cardDeck').innerHTML = `
@@ -234,7 +242,7 @@
                             <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location}</p>
                         </div>
                         <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
-                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> AI Match</span>
+                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Deck Card</span>
                             <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
                         </div>
                     </div>
@@ -249,15 +257,19 @@
             if (!card) return;
 
             if (direction === 'right') {
-                if (savedFinds.length >= rightSwipeLimit) {
+                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+                
+                // Strict check: If user reached limit, halt and show paywall
+                if (currentFinds.length >= rightSwipeLimit) {
                     document.getElementById('paywallOverlay').classList.remove('hidden');
-                    return;
+                    return; 
                 }
 
                 const item = items[currentIndex];
-                if (!savedFinds.some(f => f.title === item.title)) {
-                    savedFinds.push(item);
-                    localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
+                if (!currentFinds.some(f => f.title === item.title)) {
+                    currentFinds.push(item);
+                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+                    savedFinds = currentFinds;
                     document.getElementById('findsBadge').innerText = savedFinds.length;
                 }
                 card.style.transform = 'translateX(400px) rotate(20deg)';
@@ -277,10 +289,12 @@
                 rightSwipeLimit += 1; 
                 document.getElementById('paywallOverlay').classList.add('hidden'); 
                 
+                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
-                if (!savedFinds.some(f => f.title === item.title)) {
-                    savedFinds.push(item);
-                    localStorage.setItem('scout_liked_items', JSON.stringify(savedFinds));
+                if (!currentFinds.some(f => f.title === item.title)) {
+                    currentFinds.push(item);
+                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+                    savedFinds = currentFinds;
                     document.getElementById('findsBadge').innerText = savedFinds.length;
                 }
 
@@ -295,6 +309,35 @@
                     renderCard();
                 }, 250);
             }
+        }
+
+        window.watchAdForExtraSwipe = function() {
+            // Simulated rewarded ad trigger for mobile web/PWA
+            alert("Playing short partner ad...");
+            setTimeout(() => {
+                rightSwipeLimit += 1;
+                document.getElementById('paywallOverlay').classList.add('hidden');
+
+                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+                const item = items[currentIndex];
+                if (!currentFinds.some(f => f.title === item.title)) {
+                    currentFinds.push(item);
+                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+                    savedFinds = currentFinds;
+                    document.getElementById('findsBadge').innerText = savedFinds.length;
+                }
+
+                const card = document.getElementById('activeSwipeCard');
+                if (card) {
+                    card.style.transform = 'translateX(400px) rotate(20deg)';
+                    card.style.opacity = '0';
+                }
+
+                setTimeout(() => {
+                    currentIndex++;
+                    renderCard();
+                }, 250);
+            }, 1000);
         }
 
         window.dismissPaywallAndSwipeLeft = function() {
