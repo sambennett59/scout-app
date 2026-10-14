@@ -109,13 +109,8 @@
             window.location.href = `swipe.html?q=${encodeURIComponent(query)}`;
         }
 
-        window.triggerSurpriseMe = async function() {
-            const { data: items } = await db.from('items').select('*');
-            if (!items || items.length === 0) { window.location.href = 'swipe.html'; return; }
-
-            const randomItem = items[Math.floor(Math.random() * items.length)];
-            const searchKeyword = randomItem ? randomItem.title.split(' ')[0] : '';
-            window.location.href = `swipe.html?q=${encodeURIComponent(searchKeyword)}`;
+        window.triggerSurpriseMe = function() {
+            window.location.href = 'swipe.html?mode=surprise';
         }
     </script>
 </body>
