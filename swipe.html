@@ -1,470 +1,301 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>SCOUT — Swipe Deck</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script>tailwind.config = { theme: { extend: { colors: { scout: { dark: '#121214', card: '#1e1e22', neon: '#C6FF00', neonhover: '#adff2f' } } } } }</script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <link rel="manifest" href="manifest.json">
-    <style>
-        body { background-color: #0d0d0d; overflow: hidden; touch-action: none; -webkit-tap-highlight-color: transparent; }
-        .phone-container { max-width: 430px; height: 100vh; height: 100dvh; background-color: #121214; margin: 0 auto; position: relative; display: flex; flex-direction: column; justify-content: space-between; }
-        .swipe-card { transition: transform 0.25s ease, opacity 0.25s ease; touch-action: pan-y; }
-    </style>
-</head>
-<body class="text-white font-sans antialiased">
-    <div class="phone-container">
-        
-        <!-- HEADER -->
-        <header class="flex justify-between items-center px-6 pt-8 pb-4 z-20 shrink-0">
-            <button onclick="window.location.href='index.html'" class="text-zinc-400 hover:text-white text-2xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
-            <div class="text-center">
-                <h1 class="text-xs font-black tracking-widest text-scout-neon uppercase" id="deckHeaderTitle">DISCOVER DECK</h1>
-                <span class="text-[10px] text-zinc-400 font-semibold" id="cardCounter">Daily Swipes: 0 of 5</span>
-            </div>
-            <a href="finds.html" class="relative text-zinc-400 hover:text-white text-2xl">
-                <i class="fa-solid fa-heart"></i>
-                <span id="findsBadge" class="absolute -top-1 -right-2 bg-scout-neon text-scout-dark text-[10px] font-black w-4 h-4 rounded-full flex items-center justify-center">0</span>
-            </a>
-        </header>
+<script>
+    const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+    const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+    const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        <!-- SWIPE CARD CONTAINER -->
-        <main class="px-6 py-2 flex-grow relative flex items-center justify-center overflow-hidden">
-            <div id="cardDeck" class="w-full h-full max-h-[550px] relative flex items-center justify-center">
-                <div class="text-center text-zinc-500 text-sm">
-                    <i class="fa-solid fa-spinner fa-spin text-3xl text-scout-neon mb-3 block"></i>
-                    Loading listings...
-                </div>
-            </div>
+    let items = [];
+    let currentIndex = 0;
 
-            <!-- PAYWALL MODAL -->
-            <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/98 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
-                <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg">
-                    <i class="fa-solid fa-heart-circle-bolt"></i>
-                </div>
-                <div class="space-y-1">
-                    <h2 class="text-xl font-black text-white">Daily Right Swipe Limit Reached</h2>
-                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot for today to continue liking items.</p>
-                </div>
-                
-                <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
-                    <span>Unlock 1 Extra Swipe for 49p</span>
-                    <i class="fa-solid fa-arrow-right"></i>
-                </button>
+    const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
+    const userEmail = profile.email || 'anonymous_user@scout.local';
 
-                <button onclick="watchAdForExtraSwipe()" class="w-full bg-scout-card hover:bg-zinc-800 text-scout-neon font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-scout-neon/30 transition text-xs cursor-pointer flex items-center justify-center space-x-2">
-                    <i class="fa-solid fa-play"></i>
-                    <span>Watch a short ad for 1 free swipe</span>
-                </button>
+    let rightSwipeLimit = 5;
+    let totalRightSwipes = 0;
+    const todayStr = new Date().toISOString().split('T')[0];
 
-                <button onclick="dismissPaywallAndSwipeLeft()" class="w-full bg-scout-card hover:bg-zinc-800 text-zinc-300 font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-zinc-800 transition text-xs cursor-pointer">
-                    No thanks, swipe left instead
-                </button>
-                <a href="finds.html" class="text-xs text-zinc-500 hover:text-white underline pt-1 block">View Saved Finds Basket</a>
-            </div>
-        </main>
+    async function syncSwipeQuotas() {
+        let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).single();
 
-        <!-- SWIPE ACTION BUTTONS -->
-        <footer class="px-6 pb-6 pt-2 z-20 shrink-0">
-            <div class="flex justify-center items-center space-x-8">
-                <button onclick="swipeAction('left')" class="w-16 h-16 bg-scout-card hover:bg-zinc-800 text-red-400 border border-zinc-800 rounded-full flex items-center justify-center text-2xl shadow-lg transition active:scale-95 cursor-pointer">
-                    <i class="fa-solid fa-xmark"></i>
-                </button>
-                <button onclick="swipeAction('right')" class="w-20 h-20 bg-scout-neon hover:bg-scout-neonhover text-scout-dark rounded-full flex items-center justify-center text-3xl shadow-xl transition active:scale-95 cursor-pointer">
-                    <i class="fa-solid fa-heart"></i>
-                </button>
-            </div>
-        </footer>
-
-        <!-- BOTTOM TAB NAVIGATION -->
-        <nav class="w-full h-16 bg-scout-dark border-t border-zinc-900 flex justify-around items-center px-2 shrink-0">
-            <a href="index.html" class="flex flex-col items-center space-y-0.5 text-scout-neon">
-                <i class="fa-solid fa-compass text-base"></i>
-                <span class="text-[9px] font-bold tracking-tight">Discover</span>
-            </a>
-            <a href="finds.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-regular fa-heart text-base"></i>
-                <span class="text-[9px] font-semibold tracking-tight">Finds</span>
-            </a>
-            <a href="radars.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-solid fa-bullseye text-base"></i>
-                <span class="text-[9px] font-semibold tracking-tight">Radars</span>
-            </a>
-            <a href="profile.html" class="flex flex-col items-center space-y-0.5 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-regular fa-user text-base"></i>
-                <span class="text-[9px] font-semibold tracking-tight">Profile</span>
-            </a>
-        </nav>
-
-    </div>
-
-    <script>
-        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
-        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
-        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-        let items = [];
-        let currentIndex = 0;
-
-        // AUTOMATIC DAILY RESET
-        const todayStr = new Date().toISOString().split('T')[0];
-        let lastSwipeDate = localStorage.getItem('scout_last_swipe_date');
-
-        if (lastSwipeDate !== todayStr) {
-            localStorage.setItem('scout_last_swipe_date', todayStr);
-            localStorage.setItem('scout_total_swipes', '0');
-            localStorage.setItem('scout_right_limit', '5');
+        if (!data) {
+            const { data: newProfile } = await db.from('profiles').insert([{
+                email: userEmail,
+                upload_count: 0,
+                upload_month: new Date().toISOString().substring(0, 7),
+                right_swipes: 0,
+                swipe_date: todayStr
+            }]).select().single();
+            data = newProfile;
         }
 
-        let rightSwipeLimit = parseInt(localStorage.getItem('scout_right_limit') || '5');
-        let totalRightSwipes = parseInt(localStorage.getItem('scout_total_swipes') || '0');
-        
-        function updateUI() {
-            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            document.getElementById('findsBadge').innerText = currentFinds.length;
-            document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
+        if (data) {
+            if (data.swipe_date !== todayStr) {
+                await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
+                totalRightSwipes = 0;
+            } else {
+                totalRightSwipes = data.right_swipes || 0;
+            }
         }
         updateUI();
+    }
+    syncSwipeQuotas();
 
-        async function loadDeck() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const mode = urlParams.get('mode');
-            const searchQuery = urlParams.get('q');
+    function updateUI() {
+        let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+        document.getElementById('findsBadge').innerText = currentFinds.length;
+        document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
+    }
 
-            if (mode === 'surprise') {
-                document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
-                const { data, error } = await db.from('items').select('*');
-                
-                if (error || !data || data.length === 0) {
-                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
-                    return;
-                }
-                
-                const now = new Date();
-                items = data.sort((a, b) => {
-                    const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
-                    const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
-                    if (aBoosted && !bBoosted) return -1;
-                    if (!aBoosted && bBoosted) return 1;
-                    return Math.random() - 0.5;
-                });
-                currentIndex = 0;
-                renderCard();
-                return;
-            }
+    async function loadDeck() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const mode = urlParams.get('mode');
+        const searchQuery = urlParams.get('q');
 
-            if (searchQuery) {
-                document.getElementById('deckHeaderTitle').innerText = `SEARCH: "${searchQuery}"`;
-                document.getElementById('cardDeck').innerHTML = `
-                    <div class="text-center text-zinc-500 text-sm">
-                        <i class="fa-solid fa-brain fa-pulse text-3xl text-scout-neon mb-3 block"></i>
-                        AI is finding related bargains...
-                    </div>
-                `;
-
-                try {
-                    const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
-                        body: { text: searchQuery }
-                    });
-
-                    if (embedError || !embedData || !embedData.embedding) {
-                        showNoMatches(searchQuery);
-                        return;
-                    }
-
-                    const { data: matchedItems, error } = await db.rpc('match_items', {
-                        query_embedding: embedData.embedding,
-                        match_threshold: -0.5, 
-                        match_count: 50
-                    });
-
-                    if (error || !matchedItems || matchedItems.length === 0) {
-                        showNoMatches(searchQuery);
-                        return;
-                    }
-                    
-                    const now = new Date();
-                    items = matchedItems.sort((a, b) => {
-                        const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
-                        const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
-                        if (aBoosted && !bBoosted) return -1;
-                        if (!aBoosted && bBoosted) return 1;
-                        return 0;
-                    });
-                    currentIndex = 0;
-                } catch (e) {
-                    document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">Error connecting to AI Search.</div>`;
-                    return;
-                }
-                renderCard();
-                return;
-            }
-
-            const { data, error } = await db.from('items').select('*');
-            if (error || !data || data.length === 0) {
-                document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
-                return;
-            }
-
-            // STRICT QUEUE SORTING: Active boosted posts float straight to index 0!
-            const now = new Date();
-            items = data.sort((a, b) => {
-                const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
-                const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
-                
-                if (aBoosted && !bBoosted) return -1;
-                if (!aBoosted && bBoosted) return 1;
-                
-                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-            });
-
-            currentIndex = 0;
-            renderCard();
+        const { data, error } = await db.from('items').select('*');
+        if (error || !data || data.length === 0) {
+            document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+            return;
         }
 
-        function showNoMatches(searchQuery) {
-            document.getElementById('cardDeck').innerHTML = `
+        const now = new Date();
+        items = data.sort((a, b) => {
+            const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
+            const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
+            
+            if (aBoosted && !bBoosted) return -1;
+            if (!aBoosted && bBoosted) return 1;
+            
+            if (mode === 'surprise') return Math.random() - 0.5;
+            return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        });
+
+        currentIndex = 0;
+        renderCard();
+    }
+
+    function renderCard() {
+        const deckContainer = document.getElementById('cardDeck');
+
+        if (currentIndex >= items.length) {
+            deckContainer.innerHTML = `
                 <div class="text-center space-y-4">
                     <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
                         <i class="fa-solid fa-ghost"></i>
                     </div>
                     <div>
-                        <h3 class="text-white font-black text-lg">No matches found</h3>
-                        <p class="text-zinc-500 text-xs">Nothing related to "${searchQuery}" found.</p>
+                        <h3 class="text-white font-black text-lg">You've seen it all!</h3>
+                        <p class="text-zinc-500 text-xs">No more listings left in this stack.</p>
                     </div>
-                    <button onclick="window.location.href='swipe.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
-                        View Full Deck
+                    <button onclick="window.location.href='index.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
+                        Back to Discover
                     </button>
                 </div>
             `;
+            return;
         }
 
-        function renderCard() {
-            const deckContainer = document.getElementById('cardDeck');
+        updateUI();
+        const item = items[currentIndex];
+        const isRestricted = item.is_restricted === true;
+        const isBoosted = item.is_boosted && item.boost_expires_at && new Date(item.boost_expires_at) > new Date();
 
-            if (currentIndex >= items.length) {
-                deckContainer.innerHTML = `
-                    <div class="text-center space-y-4">
-                        <div class="w-16 h-16 bg-scout-card border border-zinc-800 rounded-2xl flex items-center justify-center mx-auto text-3xl text-zinc-600 shadow-inner">
-                            <i class="fa-solid fa-ghost"></i>
+        deckContainer.innerHTML = `
+            <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border ${isBoosted ? 'border-scout-neon shadow-[0_0_20px_rgba(198,255,0,0.2)]' : 'border-zinc-800'} rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
+                <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden">
+                    <img id="cardImage" src="${item.image_url}" class="w-full h-full object-cover transition duration-300 ${isRestricted ? 'filter blur-2xl scale-110' : ''}" />
+                    
+                    <span class="absolute top-4 left-4 bg-scout-dark/85 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg z-10">
+                        ${item.price}
+                    </span>
+
+                    ${isBoosted ? `
+                        <span class="absolute top-4 right-4 bg-scout-neon text-scout-dark text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg z-10 flex items-center space-x-1">
+                            <i class="fa-solid fa-rocket"></i><span>Boosted</span>
+                        </span>
+                    ` : ''}
+
+                    ${isRestricted ? `
+                        <div id="blurWarningOverlay" onclick="revealRestrictedContent(event)" class="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center cursor-pointer z-20">
+                            <i class="fa-solid fa-triangle-exclamation text-amber-400 text-3xl mb-2"></i>
+                            <h3 class="text-white font-black text-sm uppercase tracking-wide">18+ Restricted Content</h3>
+                            <p class="text-zinc-400 text-[10px] mt-1">Tobacco / Age-Restricted. Tap anywhere to reveal image.</p>
                         </div>
-                        <div>
-                            <h3 class="text-white font-black text-lg">You've seen it all!</h3>
-                            <p class="text-zinc-500 text-xs">No more listings left in this stack.</p>
-                        </div>
-                        <button onclick="window.location.href='index.html'" class="mt-2 bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-bold text-xs uppercase tracking-wider px-6 py-3 rounded-xl transition cursor-pointer">
-                            Back to Discover
-                        </button>
+                    ` : ''}
+                </div>
+
+                <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark">
+                    <div class="space-y-1">
+                        <h2 class="text-lg font-black text-white leading-snug line-clamp-2">${item.title}</h2>
+                        <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location}</p>
                     </div>
-                `;
+                    <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
+                        <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Deck Card</span>
+                        <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        initTouchGestures();
+    }
+
+    window.revealRestrictedContent = function(e) {
+        e.stopPropagation();
+        const img = document.getElementById('cardImage');
+        const overlay = document.getElementById('blurWarningOverlay');
+        if (img) img.classList.remove('filter', 'blur-2xl', 'scale-110');
+        if (overlay) overlay.style.display = 'none';
+    }
+
+    window.swipeAction = async function(direction) {
+        const card = document.getElementById('activeSwipeCard');
+        if (!card) return;
+
+        if (direction === 'right') {
+            if (totalRightSwipes >= rightSwipeLimit) {
+                document.getElementById('paywallOverlay').classList.remove('hidden');
                 return;
             }
 
-            updateUI();
-            const item = items[currentIndex];
-            const isRestricted = item.is_restricted === true;
-            const isBoosted = item.is_boosted && item.boost_expires_at && new Date(item.boost_expires_at) > new Date();
+            const currentItem = items[currentIndex];
+            const likedItem = {
+                title: currentItem.title || 'Untitled Item',
+                price: currentItem.price || '£0.00',
+                location: currentItem.location || 'Local',
+                image_url: currentItem.image_url || '',
+                external_link: currentItem.external_link || '#'
+            };
 
-            deckContainer.innerHTML = `
-                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border ${isBoosted ? 'border-scout-neon shadow-[0_0_20px_rgba(198,255,0,0.2)]' : 'border-zinc-800'} rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
-                    <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden">
-                        <img id="cardImage" src="${item.image_url}" class="w-full h-full object-cover transition duration-300 ${isRestricted ? 'filter blur-2xl scale-110' : ''}" />
-                        
-                        <span class="absolute top-4 left-4 bg-scout-dark/85 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg z-10">
-                            ${item.price}
-                        </span>
-
-                        ${isBoosted ? `
-                            <span class="absolute top-4 right-4 bg-scout-neon text-scout-dark text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg z-10 flex items-center space-x-1">
-                                <i class="fa-solid fa-rocket"></i><span>Boosted</span>
-                            </span>
-                        ` : ''}
-
-                        ${isRestricted ? `
-                            <div id="blurWarningOverlay" onclick="revealRestrictedContent(event)" class="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center cursor-pointer z-20">
-                                <i class="fa-solid fa-triangle-exclamation text-amber-400 text-3xl mb-2"></i>
-                                <h3 class="text-white font-black text-sm uppercase tracking-wide">18+ Restricted Content</h3>
-                                <p class="text-zinc-400 text-[10px] mt-1">Tobacco / Age-Restricted. Tap anywhere to reveal image.</p>
-                            </div>
-                        ` : ''}
-                    </div>
-
-                    <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark">
-                        <div class="space-y-1">
-                            <h2 class="text-lg font-black text-white leading-snug line-clamp-2">${item.title}</h2>
-                            <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location}</p>
-                        </div>
-                        <div class="flex justify-between items-center pt-3 border-t border-zinc-800/80">
-                            <span class="text-xs font-bold text-scout-neon flex items-center"><i class="fa-solid fa-tags mr-1"></i> Deck Card</span>
-                            <span class="text-[10px] text-zinc-500 uppercase font-black tracking-widest">Swipe Left/Right</span>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            initTouchGestures();
-        }
-
-        window.revealRestrictedContent = function(e) {
-            e.stopPropagation();
-            const img = document.getElementById('cardImage');
-            const overlay = document.getElementById('blurWarningOverlay');
-            if (img) img.classList.remove('filter', 'blur-2xl', 'scale-110');
-            if (overlay) overlay.style.display = 'none';
-        }
-
-        window.swipeAction = function(direction) {
-            const card = document.getElementById('activeSwipeCard');
-            if (!card) return;
-
-            if (direction === 'right') {
-                const currentItem = items[currentIndex];
-                const likedItem = {
-                    title: currentItem.title || 'Untitled Item',
-                    price: currentItem.price || '£0.00',
-                    location: currentItem.location || 'Local',
-                    image_url: currentItem.image_url || '',
-                    external_link: currentItem.external_link || '#'
-                };
-
-                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                if (!currentFinds.some(f => f.title === likedItem.title)) {
-                    currentFinds.push(likedItem);
-                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                }
-
-                totalRightSwipes++;
-                localStorage.setItem('scout_total_swipes', totalRightSwipes);
-                updateUI();
-
-                if (totalRightSwipes > rightSwipeLimit) {
-                    document.getElementById('paywallOverlay').classList.remove('hidden');
-                    return; 
-                }
-
-                card.style.transform = 'translateX(400px) rotate(20deg)';
-            } else {
-                card.style.transform = 'translateX(-400px) rotate(-20deg)';
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            if (!currentFinds.some(f => f.title === likedItem.title)) {
+                currentFinds.push(likedItem);
+                localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
             }
-            card.style.opacity = '0';
+
+            totalRightSwipes++;
+            await db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
+            updateUI();
+
+            if (totalRightSwipes > rightSwipeLimit) {
+                document.getElementById('paywallOverlay').classList.remove('hidden');
+                return;
+            }
+
+            card.style.transform = 'translateX(400px) rotate(20deg)';
+        } else {
+            card.style.transform = 'translateX(-400px) rotate(-20deg)';
+        }
+        card.style.opacity = '0';
+
+        setTimeout(() => {
+            currentIndex++;
+            renderCard();
+        }, 250);
+    }
+
+    window.unlockMoreRightSwipe = async function() {
+        if (confirm("Confirm 49p payment for 1 extra daily right-swipe slot?")) {
+            rightSwipeLimit += 1;
+            document.getElementById('paywallOverlay').classList.add('hidden'); 
+            
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            const currentItem = items[currentIndex];
+            const likedItem = {
+                title: currentItem.title || 'Untitled Item',
+                price: currentItem.price || '£0.00',
+                location: currentItem.location || 'Local',
+                image_url: currentItem.image_url || '',
+                external_link: currentItem.external_link || '#'
+            };
+            if (!currentFinds.some(f => f.title === likedItem.title)) {
+                currentFinds.push(likedItem);
+                localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+            }
+
+            totalRightSwipes++;
+            await db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
+            updateUI();
+
+            const card = document.getElementById('activeSwipeCard');
+            if (card) {
+                card.style.transform = 'translateX(400px) rotate(20deg)';
+                card.style.opacity = '0';
+            }
 
             setTimeout(() => {
                 currentIndex++;
                 renderCard();
             }, 250);
         }
+    }
 
-        window.unlockMoreRightSwipe = function() {
-            if (confirm("Confirm 49p payment for 1 extra daily right-swipe slot?")) {
-                rightSwipeLimit += 1;
-                localStorage.setItem('scout_right_limit', rightSwipeLimit);
-                document.getElementById('paywallOverlay').classList.add('hidden'); 
-                
-                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                const currentItem = items[currentIndex];
-                const likedItem = {
-                    title: currentItem.title || 'Untitled Item',
-                    price: currentItem.price || '£0.00',
-                    location: currentItem.location || 'Local',
-                    image_url: currentItem.image_url || '',
-                    external_link: currentItem.external_link || '#'
-                };
-                if (!currentFinds.some(f => f.title === likedItem.title)) {
-                    currentFinds.push(likedItem);
-                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                }
-
-                totalRightSwipes++;
-                localStorage.setItem('scout_total_swipes', totalRightSwipes);
-                updateUI();
-
-                const card = document.getElementById('activeSwipeCard');
-                if (card) {
-                    card.style.transform = 'translateX(400px) rotate(20deg)';
-                    card.style.opacity = '0';
-                }
-
-                setTimeout(() => {
-                    currentIndex++;
-                    renderCard();
-                }, 250);
-            }
-        }
-
-        window.watchAdForExtraSwipe = function() {
-            alert("Playing short partner ad...");
-            setTimeout(() => {
-                rightSwipeLimit += 1;
-                localStorage.setItem('scout_right_limit', rightSwipeLimit);
-                document.getElementById('paywallOverlay').classList.add('hidden');
-
-                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                const currentItem = items[currentIndex];
-                const likedItem = {
-                    title: currentItem.title || 'Untitled Item',
-                    price: currentItem.price || '£0.00',
-                    location: currentItem.location || 'Local',
-                    image_url: currentItem.image_url || '',
-                    external_link: currentItem.external_link || '#'
-                };
-                if (!currentFinds.some(f => f.title === likedItem.title)) {
-                    currentFinds.push(likedItem);
-                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                }
-
-                totalRightSwipes++;
-                localStorage.setItem('scout_total_swipes', totalRightSwipes);
-                updateUI();
-
-                const card = document.getElementById('activeSwipeCard');
-                if (card) {
-                    card.style.transform = 'translateX(400px) rotate(20deg)';
-                    card.style.opacity = '0';
-                }
-
-                setTimeout(() => {
-                    currentIndex++;
-                    renderCard();
-                }, 250);
-            }, 1000);
-        }
-
-        window.dismissPaywallAndSwipeLeft = function() {
+    window.watchAdForExtraSwipe = async function() {
+        alert("Playing short partner ad...");
+        setTimeout(async () => {
+            rightSwipeLimit += 1;
             document.getElementById('paywallOverlay').classList.add('hidden');
-            swipeAction('left');
-        }
 
-        function initTouchGestures() {
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            const currentItem = items[currentIndex];
+            const likedItem = {
+                title: currentItem.title || 'Untitled Item',
+                price: currentItem.price || '£0.00',
+                location: currentItem.location || 'Local',
+                image_url: currentItem.image_url || '',
+                external_link: currentItem.external_link || '#'
+            };
+            if (!currentFinds.some(f => f.title === likedItem.title)) {
+                currentFinds.push(likedItem);
+                localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+            }
+
+            totalRightSwipes++;
+            await db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
+            updateUI();
+
             const card = document.getElementById('activeSwipeCard');
-            if (!card) return;
+            if (card) {
+                card.style.transform = 'translateX(400px) rotate(20deg)';
+                card.style.opacity = '0';
+            }
 
-            let startX = 0;
-            let currentX = 0;
+            setTimeout(() => {
+                currentIndex++;
+                renderCard();
+            }, 250);
+        }, 1000);
+    }
 
-            card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
-            }, { passive: true });
+    window.dismissPaywallAndSwipeLeft = function() {
+        document.getElementById('paywallOverlay').classList.add('hidden');
+        swipeAction('left');
+    }
 
-            card.addEventListener('touchmove', (e) => {
-                currentX = e.touches[0].clientX;
-                const diff = currentX - startX;
-                card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
-            }, { passive: true });
+    function initTouchGestures() {
+        const card = document.getElementById('activeSwipeCard');
+        if (!card) return;
 
-            card.addEventListener('touchend', (e) => {
-                const diff = currentX - startX;
-                if (Math.abs(diff) > 100) {
-                    swipeAction(diff > 0 ? 'right' : 'left');
-                } else {
-                    card.style.transform = 'translateX(0) rotate(0)';
-                }
-            });
-        }
+        let startX = 0;
+        let currentX = 0;
 
-        loadDeck();
-    </script>
-</body>
-</html>
+        card.addEventListener('touchstart', (e) => {
+            startX = e.touches[0].clientX;
+        }, { passive: true });
+
+        card.addEventListener('touchmove', (e) => {
+            currentX = e.touches[0].clientX;
+            const diff = currentX - startX;
+            card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
+        }, { passive: true });
+
+        card.addEventListener('touchend', (e) => {
+            const diff = currentX - startX;
+            if (Math.abs(diff) > 100) {
+                swipeAction(diff > 0 ? 'right' : 'left');
+            } else {
+                card.style.transform = 'translateX(0) rotate(0)';
+            }
+        });
+    }
+
+    loadDeck();
+</script>
