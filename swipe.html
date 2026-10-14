@@ -14,26 +14,30 @@
     const todayStr = new Date().toISOString().split('T')[0];
 
     async function syncSwipeQuotas() {
-        let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).single();
+        try {
+            let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
 
-        if (!data) {
-            const { data: newProfile } = await db.from('profiles').insert([{
-                email: userEmail,
-                upload_count: 0,
-                upload_month: new Date().toISOString().substring(0, 7),
-                right_swipes: 0,
-                swipe_date: todayStr
-            }]).select().single();
-            data = newProfile;
-        }
-
-        if (data) {
-            if (data.swipe_date !== todayStr) {
-                await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
-                totalRightSwipes = 0;
-            } else {
-                totalRightSwipes = data.right_swipes || 0;
+            if (!data) {
+                const { data: newProfile } = await db.from('profiles').insert([{
+                    email: userEmail,
+                    upload_count: 0,
+                    upload_month: new Date().toISOString().substring(0, 7),
+                    right_swipes: 0,
+                    swipe_date: todayStr
+                }]).select().maybeSingle();
+                data = newProfile;
             }
+
+            if (data) {
+                if (data.swipe_date !== todayStr) {
+                    await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
+                    totalRightSwipes = 0;
+                } else {
+                    totalRightSwipes = data.right_swipes || 0;
+                }
+            }
+        } catch (e) {
+            console.log("Quota sync fallback active:", e);
         }
         updateUI();
     }
@@ -49,6 +53,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const mode = urlParams.get('mode');
         const searchQuery = urlParams.get('q');
+
+        if (mode === 'surprise') {
+            document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
+        }
 
         const { data, error } = await db.from('items').select('*');
         if (error || !data || data.length === 0) {

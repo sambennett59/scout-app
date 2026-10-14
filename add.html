@@ -10,30 +10,31 @@
     const monthlyLimit = 20;
     const currentMonthStr = new Date().toISOString().substring(0, 7);
 
-    // FETCH SERVER-SIDE PROFILE & QUOTA FROM SUPABASE
     async function syncServerProfile() {
-        let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).single();
-        
-        if (!data) {
-            // Initialize profile row if it doesn't exist yet
-            const { data: newProfile } = await db.from('profiles').insert([{
-                email: userEmail,
-                upload_count: 0,
-                upload_month: currentMonthStr,
-                right_swipes: 0,
-                swipe_date: new Date().toISOString().split('T')[0]
-            }]).select().single();
-            data = newProfile;
-        }
-
-        if (data) {
-            // Reset monthly counter server-side if it's a new month
-            if (data.upload_month !== currentMonthStr) {
-                await db.from('profiles').update({ upload_count: 0, upload_month: currentMonthStr }).eq('email', userEmail);
-                uploadCount = 0;
-            } else {
-                uploadCount = data.upload_count || 0;
+        try {
+            let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
+            
+            if (!data) {
+                const { data: newProfile } = await db.from('profiles').insert([{
+                    email: userEmail,
+                    upload_count: 0,
+                    upload_month: currentMonthStr,
+                    right_swipes: 0,
+                    swipe_date: new Date().toISOString().split('T')[0]
+                }]).select().maybeSingle();
+                data = newProfile;
             }
+
+            if (data) {
+                if (data.upload_month !== currentMonthStr) {
+                    await db.from('profiles').update({ upload_count: 0, upload_month: currentMonthStr }).eq('email', userEmail);
+                    uploadCount = 0;
+                } else {
+                    uploadCount = data.upload_count || 0;
+                }
+            }
+        } catch (e) {
+            console.log("Profile sync fallback active:", e);
         }
         document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${uploadCount}/${monthlyLimit}`;
     }
@@ -164,7 +165,6 @@
             publishBtn.innerText = "Launch to Swipe Deck 🚀";
             publishBtn.disabled = false;
         } else {
-            // Increment quota securely on the database profile
             uploadCount++;
             await db.from('profiles').update({ upload_count: uploadCount }).eq('email', userEmail);
 
