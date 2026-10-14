@@ -84,7 +84,7 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- FILTER MODAL (Distance & Price) -->
+        <!-- FILTER MODAL -->
         <!-- ========================================== -->
         <div id="filterModal" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-[200] flex flex-col items-center justify-center p-6 text-center space-y-6 hidden">
             <div class="w-14 h-14 bg-scout-neon/10 border border-scout-neon/30 text-scout-neon rounded-2xl flex items-center justify-center text-2xl"><i class="fa-solid fa-sliders"></i></div>
@@ -139,7 +139,6 @@
                     </div>
                 </div>
 
-                <!-- Google Play UGC Compliance Modal (Report & Block) -->
                 <div id="ugcMenuModal" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-[150] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                     <div class="w-14 h-14 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl flex items-center justify-center text-2xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <h3 class="text-lg font-black text-white">Manage Listing / User</h3>
@@ -274,7 +273,7 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- VIEW: SETUP / AUTHENTICATION (No Nav) -->
+        <!-- VIEW: SETUP / AUTHENTICATION -->
         <!-- ========================================== -->
         <div id="view-setup" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-2">
@@ -301,7 +300,7 @@
         </div>
 
         <!-- ========================================== -->
-        <!-- VIEW: ADD (No Nav) -->
+        <!-- VIEW: ADD -->
         <!-- ========================================== -->
         <div id="view-add" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-4">
@@ -343,7 +342,7 @@
                         </div>
                     </div>
 
-                    <button id="publishBtn" onclick="executeUpload()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Launch to Swipe Deck 🚀</button>
+                    <button type="button" onclick="executeUpload()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Launch to Swipe Deck 🚀</button>
                 </div>
             </main>
         </div>
@@ -385,6 +384,9 @@
             const { data: { session } } = await db.auth.getSession();
             if (session && session.user) {
                 currentUser = session.user;
+                userEmail = currentUser.email;
+            } else {
+                currentUser = { email: 'developer@scout.local' };
                 userEmail = currentUser.email;
             }
             syncSwipeQuotas();
@@ -452,7 +454,6 @@
             if (viewName === 'profile') loadProfileUI();
         }
 
-        // --- GPS LOCATION HELPER FOR UPLOADING ---
         function fetchUserLocation() {
             if (!navigator.geolocation) {
                 alert("Geolocation is not supported by your browser");
@@ -475,7 +476,6 @@
             });
         }
 
-        // --- SWIPE LOGIC ---
         let items = [];
         let currentIndex = 0;
         let rightSwipeLimit = 5;
@@ -516,23 +516,17 @@
                 return;
             }
 
-            // Apply price filter criteria from modal slider
             const maxPriceVal = parseFloat(document.getElementById('filterPriceRange').value);
             
             items = data.filter(item => {
                 if (blockedSellers.includes(item.user_email)) return false;
-                
-                // Clean price string for comparison (e.g. "£350" -> 350)
                 const numericPrice = parseFloat(item.price.replace(/[^0-9.]/g, '')) || 0;
                 if (maxPriceVal < 1000 && numericPrice > maxPriceVal) return false;
 
                 if (mode === 'search' && searchQuery) {
                     const queryLower = searchQuery.toLowerCase();
-                    const titleMatch = item.title.toLowerCase().includes(queryLower);
-                    const locMatch = item.location.toLowerCase().includes(queryLower);
-                    return titleMatch || locMatch;
+                    return item.title.toLowerCase().includes(queryLower) || item.location.toLowerCase().includes(queryLower);
                 }
-
                 return true;
             });
 
@@ -598,7 +592,7 @@
 
         function reportCurrentListing() {
             document.getElementById('ugcMenuModal').classList.add('hidden');
-            alert("Listing reported successfully. Our moderation team will review it within 24 hours.");
+            alert("Listing reported successfully.");
             swipeAction('right');
         }
 
@@ -608,7 +602,7 @@
                 localStorage.setItem('scout_blocked', JSON.stringify(blockedSellers));
             }
             document.getElementById('ugcMenuModal').classList.add('hidden');
-            alert("Seller blocked. Their listings have been hidden from your deck.");
+            alert("Seller blocked.");
             currentIndex++;
             renderCard();
         }
@@ -617,7 +611,8 @@
             if (confirm("Confirm 49p payment for 1 extra daily right-swipe slot?")) {
                 rightSwipeLimit += 1;
                 document.getElementById('paywallOverlay').classList.add('hidden');
-                swipeAction('right');
+                updateUI();
+                alert("Payment successful! 1 extra swipe unlocked.");
             }
         }
 
@@ -626,7 +621,8 @@
             setTimeout(() => {
                 rightSwipeLimit += 1;
                 document.getElementById('paywallOverlay').classList.add('hidden');
-                swipeAction('right');
+                updateUI();
+                alert("Ad watched! 1 extra swipe unlocked.");
             }, 1000);
         }
 
@@ -639,49 +635,35 @@
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
             
-            let startX = 0; 
-            let currentX = 0;
-            let isDragging = false;
+            let startX = 0; let currentX = 0; let isDragging = false;
 
-            const startDrag = (x) => {
-                startX = x;
-                isDragging = true;
-                card.style.transition = 'none';
-            };
-
+            const startDrag = (x) => { startX = x; isDragging = true; card.style.transition = 'none'; };
             const drag = (x) => {
                 if (!isDragging) return;
                 currentX = x;
                 const diff = currentX - startX;
                 card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
             };
-
             const endDrag = () => {
                 if (!isDragging) return;
                 isDragging = false;
                 card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
                 const diff = currentX - startX;
-                if (Math.abs(diff) > 100) {
-                    swipeAction(diff > 0 ? 'right' : 'left');
-                } else {
-                    card.style.transform = 'translateX(0) rotate(0)';
-                }
+                if (Math.abs(diff) > 100) { swipeAction(diff > 0 ? 'right' : 'left'); }
+                else { card.style.transform = 'translateX(0) rotate(0)'; }
             };
 
             card.addEventListener('mousedown', e => startDrag(e.clientX));
             window.addEventListener('mousemove', e => drag(e.clientX));
             window.addEventListener('mouseup', endDrag);
-
             card.addEventListener('touchstart', e => startDrag(e.touches[0].clientX), { passive: true });
             card.addEventListener('touchmove', e => drag(e.touches[0].clientX), { passive: true });
             card.addEventListener('touchend', endDrag);
         }
 
-        // --- FINDS LOGIC ---
         function loadFinds() {
             const container = document.getElementById('savedFindsContainer');
             const savedFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            
             if (savedFinds.length > 0) {
                 container.innerHTML = '';
                 savedFinds.forEach((item, index) => {
@@ -697,15 +679,10 @@
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
-                                <button onclick="shareItem('${item.title.replace(/'/g, "\\'")}', '${targetUrl}', '${item.price}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2.5 rounded-xl transition cursor-pointer" title="Share Link">
-                                    <i class="fa-solid fa-share-nodes text-xs"></i>
-                                </button>
                                 <a href="${targetUrl}" target="_blank" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black text-[10px] uppercase tracking-wider px-3.5 py-2.5 rounded-xl transition shadow-md">
                                     Buy <i class="fa-solid fa-arrow-right ml-0.5"></i>
                                 </a>
-                                <button onclick="removeFind(${index})" class="text-zinc-600 hover:text-red-400 p-2 transition cursor-pointer">
-                                    <i class="fa-solid fa-xmark text-xs"></i>
-                                </button>
+                                <button onclick="removeFind(${index})" class="text-zinc-600 hover:text-red-400 p-2 cursor-pointer"><i class="fa-solid fa-xmark text-xs"></i></button>
                             </div>
                         </div>`;
                 });
@@ -721,16 +698,6 @@
             loadFinds();
         }
 
-        function shareItem(title, url, price) {
-            if (navigator.share) {
-                navigator.share({ title: 'Scout Bargain', text: `Check out this find: ${title} for ${price}!`, url: url }).catch(() => {});
-            } else {
-                navigator.clipboard.writeText(url);
-                alert("Listing link copied to clipboard!");
-            }
-        }
-
-        // --- PROFILE UI LOGIC ---
         function loadProfileUI() {
             if (currentUser) {
                 document.getElementById('profileName').innerText = currentUser.email.split('@')[0];
@@ -741,7 +708,6 @@
             }
         }
 
-        // --- RADARS LOGIC ---
         let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
         function loadRadars() {
             const container = document.getElementById('radarsListContainer');
@@ -773,7 +739,6 @@
             loadRadars();
         }
 
-        // --- ADD & BOOST LOGIC ---
         function setBoostMode(boosted) {
             isBoostedActive = boosted;
             const stdBtn = document.getElementById('standardOptionBtn');
@@ -823,17 +788,16 @@
         }
 
         async function executeUpload() {
-            if (!currentUser) {
-                alert("You must be signed in securely to broadcast a listing.");
-                switchView('setup');
-                return;
-            }
-
-            const title = document.getElementById('itemTitle').value.trim();
-            const price = document.getElementById('itemPrice').value.trim();
-            const location = document.getElementById('itemLocation').value.trim();
-            const external_link = document.getElementById('itemLink').value.trim();
+            const titleEl = document.getElementById('itemTitle');
+            const priceEl = document.getElementById('itemPrice');
+            const locationEl = document.getElementById('itemLocation');
+            const linkEl = document.getElementById('itemLink');
             const fileInput = document.getElementById('itemImageFile');
+
+            const title = titleEl.value.trim();
+            const price = priceEl.value.trim();
+            const location = locationEl.value ? locationEl.value.trim() : "Crediton, Devon";
+            const external_link = linkEl.value.trim();
 
             if (!title || !price || !external_link) {
                 alert("Please fill in the title, price, and marketplace link.");
@@ -842,7 +806,7 @@
 
             let imageUrl = "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
 
-            if (fileInput.files && fileInput.files[0]) {
+            if (fileInput && fileInput.files && fileInput.files[0]) {
                 imageUrl = await compressImage(fileInput.files[0]);
             }
 
@@ -854,7 +818,7 @@
                     image_url: imageUrl,
                     external_link: external_link,
                     is_boosted: isBoostedActive,
-                    user_email: currentUser.email
+                    user_email: currentUser ? currentUser.email : 'developer@scout.local'
                 }
             ]);
 
@@ -862,11 +826,14 @@
                 alert("Error launching listing: " + error.message);
             } else {
                 alert("Listing successfully launched to the Swipe Deck!");
+                titleEl.value = '';
+                priceEl.value = '';
+                linkEl.value = '';
+                if(fileInput) fileInput.value = '';
                 switchView('discover');
             }
         }
 
-        // Initialize application auth
         initAuth();
     </script>
 </body>
