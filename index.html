@@ -262,9 +262,23 @@
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label><input type="text" id="itemTitle" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label><input type="text" id="itemPrice" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Location</label><input type="text" id="itemLocation" value="Crediton, Devon" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image</label><input type="file" id="itemImageFile" accept="image/*" class="w-full bg-[#121214] text-zinc-400 file:bg-[#bcf53f] file:text-[#121214] text-xs cursor-pointer border border-zinc-800 rounded-xl" /></div>
+                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image URL / File</label><input type="text" id="itemImageFile" placeholder="Image URL" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm mb-2" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Marketplace Link</label><input type="text" id="itemLink" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     
+                    <!-- Boost Toggle & Options Restored -->
+                    <div class="bg-[#121214] p-4 rounded-xl border border-zinc-800 space-y-3">
+                        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Listing Visibility</label>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button type="button" id="standardOptionBtn" onclick="setBoostMode(false)" class="bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer">Standard</button>
+                            <button type="button" id="boostOptionBtn" onclick="setBoostMode(true)" class="bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer">🚀 Boost</button>
+                        </div>
+                        <div id="boostSliderContainer" class="hidden pt-3 border-t border-zinc-800 space-y-2">
+                            <div class="flex justify-between items-center text-xs font-bold"><span class="text-zinc-400">Duration:</span><span id="sliderDaysLabel" class="text-[#bcf53f]">1 Day</span></div>
+                            <input type="range" id="boostDaysSlider" min="1" max="30" value="1" oninput="updateBoostCost(this.value)" class="w-full accent-[#bcf53f] cursor-pointer" />
+                            <div class="flex justify-between items-center text-xs"><span class="text-zinc-400">Price:</span><span id="sliderCostLabel" class="font-black text-[#bcf53f]">£0.10</span></div>
+                        </div>
+                    </div>
+
                     <button id="publishBtn" onclick="executeUpload()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Launch to Swipe Deck 🚀</button>
                 </div>
             </main>
@@ -300,6 +314,7 @@
 
         let currentUser = null;
         let userEmail = 'anonymous_user@scout.local';
+        let isBoostedActive = false;
 
         async function initAuth() {
             const { data: { session } } = await db.auth.getSession();
@@ -402,7 +417,6 @@
             if (mode === 'surprise') document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
             else document.getElementById('deckHeaderTitle').innerText = `DISCOVER DECK`;
 
-            // Server-side sorted query optimization
             let query = db.from('items').select('*');
             if (mode !== 'surprise') {
                 query = query.order('is_boosted', { ascending: false }).order('created_at', { ascending: false });
@@ -633,14 +647,37 @@
             loadRadars();
         }
 
-        // --- ADD LISTING LOGIC ---
+        // --- ADD & BOOST LOGIC ---
+        function setBoostMode(boosted) {
+            isBoostedActive = boosted;
+            const stdBtn = document.getElementById('standardOptionBtn');
+            const boostBtn = document.getElementById('boostOptionBtn');
+            const sliderContainer = document.getElementById('boostSliderContainer');
+
+            if (boosted) {
+                boostBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
+                stdBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
+                sliderContainer.classList.remove('hidden');
+            } else {
+                stdBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
+                boostBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
+                sliderContainer.classList.add('hidden');
+            }
+        }
+
+        function updateBoostCost(days) {
+            document.getElementById('sliderDaysLabel').innerText = days + (days == 1 ? ' Day' : ' Days');
+            const cost = (days * 0.10).toFixed(2);
+            document.getElementById('sliderCostLabel').innerText = '£' + cost;
+        }
+
         async function executeUpload() {
             if (!currentUser) {
                 alert("You must be signed in securely to broadcast a listing.");
                 switchView('setup');
                 return;
             }
-            alert("Listing validated for secure user: " + currentUser.email);
+            alert("Listing validated for secure user: " + currentUser.email + (isBoostedActive ? " (Boosted)" : ""));
         }
 
         // Initialize application auth
