@@ -262,10 +262,15 @@
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label><input type="text" id="itemTitle" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label><input type="text" id="itemPrice" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Location</label><input type="text" id="itemLocation" value="Crediton, Devon" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image URL / File</label><input type="text" id="itemImageFile" placeholder="Image URL" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm mb-2" /></div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image</label>
+                        <input type="file" id="itemImageFile" accept="image/*" class="w-full bg-[#121214] text-zinc-400 file:bg-[#bcf53f] file:text-[#121214] text-xs cursor-pointer border border-zinc-800 rounded-xl" />
+                    </div>
+
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Marketplace Link</label><input type="text" id="itemLink" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     
-                    <!-- Boost Toggle & Options Restored -->
+                    <!-- Boost Toggle & Options -->
                     <div class="bg-[#121214] p-4 rounded-xl border border-zinc-800 space-y-3">
                         <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Listing Visibility</label>
                         <div class="grid grid-cols-2 gap-2">
@@ -677,7 +682,47 @@
                 switchView('setup');
                 return;
             }
-            alert("Listing validated for secure user: " + currentUser.email + (isBoostedActive ? " (Boosted)" : ""));
+
+            const title = document.getElementById('itemTitle').value.trim();
+            const price = document.getElementById('itemPrice').value.trim();
+            const location = document.getElementById('itemLocation').value.trim();
+            const external_link = document.getElementById('itemLink').value.trim();
+            const fileInput = document.getElementById('itemImageFile');
+
+            if (!title || !price) {
+                alert("Please fill in at least the item title and price.");
+                return;
+            }
+
+            let imageUrl = "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
+
+            if (fileInput.files && fileInput.files[0]) {
+                const file = fileInput.files[0];
+                imageUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.readAsDataURL(file);
+                });
+            }
+
+            const { error } = await db.from('items').insert([
+                {
+                    title: title,
+                    price: price,
+                    location: location,
+                    image_url: imageUrl,
+                    external_link: external_link,
+                    is_boosted: isBoostedActive,
+                    user_email: currentUser.email
+                }
+            ]);
+
+            if (error) {
+                alert("Error launching listing: " + error.message);
+            } else {
+                alert("Listing successfully launched to the Swipe Deck!");
+                switchView('discover');
+            }
         }
 
         // Initialize application auth
