@@ -40,7 +40,7 @@
                 </div>
             </div>
 
-            <!-- PAYWALL MODAL (49p OR WATCH AD) -->
+            <!-- PAYWALL MODAL -->
             <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/98 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                 <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg">
                     <i class="fa-solid fa-heart-circle-bolt"></i>
@@ -109,14 +109,14 @@
         let items = [];
         let currentIndex = 0;
 
-        // AUTOMATIC DAILY RESET (Midnight rollover check)
+        // AUTOMATIC DAILY RESET
         const todayStr = new Date().toISOString().split('T')[0];
         let lastSwipeDate = localStorage.getItem('scout_last_swipe_date');
 
         if (lastSwipeDate !== todayStr) {
             localStorage.setItem('scout_last_swipe_date', todayStr);
             localStorage.setItem('scout_total_swipes', '0');
-            localStorage.setItem('scout_right_limit', '5'); // Reset back to 5 free daily swipes
+            localStorage.setItem('scout_right_limit', '5');
         }
 
         let rightSwipeLimit = parseInt(localStorage.getItem('scout_right_limit') || '5');
@@ -143,7 +143,14 @@
                     return;
                 }
                 
-                items = data.sort(() => Math.random() - 0.5);
+                const now = new Date();
+                items = data.sort((a, b) => {
+                    const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
+                    const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
+                    if (aBoosted && !bBoosted) return -1;
+                    if (!aBoosted && bBoosted) return 1;
+                    return Math.random() - 0.5;
+                });
                 currentIndex = 0;
                 renderCard();
                 return;
@@ -179,7 +186,14 @@
                         return;
                     }
                     
-                    items = matchedItems;
+                    const now = new Date();
+                    items = matchedItems.sort((a, b) => {
+                        const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
+                        const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
+                        if (aBoosted && !bBoosted) return -1;
+                        if (!aBoosted && bBoosted) return 1;
+                        return 0;
+                    });
                     currentIndex = 0;
                 } catch (e) {
                     document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">Error connecting to AI Search.</div>`;
@@ -194,7 +208,19 @@
                 document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
                 return;
             }
-            items = data;
+
+            // STRICT QUEUE SORTING: Active boosted posts float straight to index 0!
+            const now = new Date();
+            items = data.sort((a, b) => {
+                const aBoosted = a.is_boosted && a.boost_expires_at && new Date(a.boost_expires_at) > now;
+                const bBoosted = b.is_boosted && b.boost_expires_at && new Date(b.boost_expires_at) > now;
+                
+                if (aBoosted && !bBoosted) return -1;
+                if (!aBoosted && bBoosted) return 1;
+                
+                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+            });
+
             currentIndex = 0;
             renderCard();
         }
@@ -240,15 +266,22 @@
             updateUI();
             const item = items[currentIndex];
             const isRestricted = item.is_restricted === true;
+            const isBoosted = item.is_boosted && item.boost_expires_at && new Date(item.boost_expires_at) > new Date();
 
             deckContainer.innerHTML = `
-                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
+                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border ${isBoosted ? 'border-scout-neon shadow-[0_0_20px_rgba(198,255,0,0.2)]' : 'border-zinc-800'} rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
                     <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden">
                         <img id="cardImage" src="${item.image_url}" class="w-full h-full object-cover transition duration-300 ${isRestricted ? 'filter blur-2xl scale-110' : ''}" />
                         
-                        <span class="absolute top-4 left-4 bg-scout-dark/80 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg z-10">
+                        <span class="absolute top-4 left-4 bg-scout-dark/85 backdrop-blur-md text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase tracking-wider shadow-lg z-10">
                             ${item.price}
                         </span>
+
+                        ${isBoosted ? `
+                            <span class="absolute top-4 right-4 bg-scout-neon text-scout-dark text-[10px] font-black px-3 py-1.5 rounded-full uppercase tracking-wider shadow-lg z-10 flex items-center space-x-1">
+                                <i class="fa-solid fa-rocket"></i><span>Boosted</span>
+                            </span>
+                        ` : ''}
 
                         ${isRestricted ? `
                             <div id="blurWarningOverlay" onclick="revealRestrictedContent(event)" class="absolute inset-0 bg-black/70 backdrop-blur-md flex flex-col items-center justify-center p-6 text-center cursor-pointer z-20">
