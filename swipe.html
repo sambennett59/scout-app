@@ -120,19 +120,12 @@
                 `;
 
                 try {
-                    // Securely fetch query embedding from Supabase backend function
-                    const res = await fetch(`${supabaseUrl}/functions/v1/GET_EMBEDDING`, {
-                        method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json',
-                            'Authorization': `Bearer ${supabaseKey}`
-                        },
-                        body: JSON.stringify({ text: searchQuery })
+                    // Securely fetches search query vector from Supabase Edge Function
+                    const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
+                        body: { text: searchQuery }
                     });
 
-                    const embedData = await res.json();
-
-                    if (!embedData || !embedData.embedding) {
+                    if (embedError || !embedData || !embedData.embedding) {
                         showNoMatches(searchQuery);
                         return;
                     }

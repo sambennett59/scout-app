@@ -126,31 +126,38 @@
             const formattedPrice = `£${parseFloat(rawPrice).toFixed(2)}`;
             const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : formattedPrice;
 
-            publishBtn.innerText = "Generating AI Concept Tags...";
+            publishBtn.innerText = "Generating AI Vector Tags...";
             publishBtn.disabled = true;
 
             let itemEmbedding = null;
             try {
                 const searchText = `${title} ${location} ${finalPrice}`;
                 
-                // Securely calls Supabase Edge Function via absolute REST endpoint
-                const res = await fetch(`${supabaseUrl}/functions/v1/GET_EMBEDDING`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${supabaseKey}`
-                    },
-                    body: JSON.stringify({ text: searchText })
+                // Uses Supabase native function invoke handler to pass secure credentials safely
+                const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
+                    body: { text: searchText }
                 });
 
-                const result = await res.json();
-                if (result.embedding) {
-                    itemEmbedding = result.embedding;
-                } else {
-                    console.warn("Embedding warning response:", result);
+                if (embedError) {
+                    alert("AI Embedding Error: " + (embedError.message || JSON.stringify(embedError)));
+                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                    publishBtn.disabled = false;
+                    return;
+                }
+
+                if (embedData && embedData.embedding) {
+                    itemEmbedding = embedData.embedding;
+                } else if (embedData && embedData.error) {
+                    alert("OpenAI Error: " + embedData.error);
+                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                    publishBtn.disabled = false;
+                    return;
                 }
             } catch (e) {
-                console.error("Secure AI connection warning:", e);
+                alert("Client AI Error: " + e.message);
+                publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                publishBtn.disabled = false;
+                return;
             }
 
             publishBtn.innerText = "Uploading Image...";
@@ -196,7 +203,7 @@
                 publishBtn.innerText = "Launch to Swipe Deck 🚀";
                 publishBtn.disabled = false;
             } else {
-                alert("Bargain launched successfully with secure AI tagging!");
+                alert("Bargain launched successfully with active AI vector tagging!");
                 window.location.href = 'swipe.html';
             }
         });
