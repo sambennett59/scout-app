@@ -47,7 +47,7 @@
                 </div>
                 <div class="space-y-1">
                     <h2 class="text-xl font-black text-white">Right Swipe Limit Reached</h2>
-                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot to save this item to your basket.</p>
+                    <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe slot to continue liking items.</p>
                 </div>
                 
                 <!-- Option 1: Pay 49p -->
@@ -110,13 +110,15 @@
 
         let items = [];
         let currentIndex = 0;
-        let rightSwipeLimit = 5; 
+        let rightSwipeLimit = parseInt(localStorage.getItem('scout_right_limit') || '5');
+        let totalRightSwipes = parseInt(localStorage.getItem('scout_total_swipes') || '0');
         
-        function updateBadge() {
+        function updateUI() {
             let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
             document.getElementById('findsBadge').innerText = currentFinds.length;
+            document.getElementById('cardCounter').innerText = `Right Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
         }
-        updateBadge();
+        updateUI();
 
         async function loadDeck() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -226,8 +228,7 @@
                 return;
             }
 
-            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            document.getElementById('cardCounter').innerText = `Right Swipes: ${currentFinds.length} / ${rightSwipeLimit}`;
+            updateUI();
             const item = items[currentIndex];
 
             deckContainer.innerHTML = `
@@ -258,22 +259,26 @@
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
 
-            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            const item = items[currentIndex];
-            const alreadyLiked = currentFinds.some(f => f.title === item.title);
-
             if (direction === 'right') {
-                // If not already liked and we hit or exceeded the limit, SHOW PAYWALL and block swipe
-                if (!alreadyLiked && currentFinds.length >= rightSwipeLimit) {
+                // Check if user reached the limit of right-swipes
+                if (totalRightSwipes >= rightSwipeLimit) {
                     document.getElementById('paywallOverlay').classList.remove('hidden');
                     return; 
                 }
 
-                if (!alreadyLiked) {
+                // Increment total right-swipes count
+                totalRightSwipes++;
+                localStorage.setItem('scout_total_swipes', totalRightSwipes);
+
+                // Save item to basket
+                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+                const item = items[currentIndex];
+                if (!currentFinds.some(f => f.title === item.title)) {
                     currentFinds.push(item);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                    updateBadge();
                 }
+
+                updateUI();
                 card.style.transform = 'translateX(400px) rotate(20deg)';
             } else {
                 card.style.transform = 'translateX(-400px) rotate(-20deg)';
@@ -288,16 +293,21 @@
 
         window.unlockMoreRightSwipe = function() {
             if (confirm("Confirm 49p payment for 1 extra right-swipe slot?")) {
-                rightSwipeLimit += 1; 
+                rightSwipeLimit += 1;
+                localStorage.setItem('scout_right_limit', rightSwipeLimit);
                 document.getElementById('paywallOverlay').classList.add('hidden'); 
                 
+                // Save current item since they paid
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
                 if (!currentFinds.some(f => f.title === item.title)) {
                     currentFinds.push(item);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                    updateBadge();
                 }
+
+                totalRightSwipes++;
+                localStorage.setItem('scout_total_swipes', totalRightSwipes);
+                updateUI();
 
                 const card = document.getElementById('activeSwipeCard');
                 if (card) {
@@ -316,6 +326,7 @@
             alert("Playing short partner ad...");
             setTimeout(() => {
                 rightSwipeLimit += 1;
+                localStorage.setItem('scout_right_limit', rightSwipeLimit);
                 document.getElementById('paywallOverlay').classList.add('hidden');
 
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
@@ -323,8 +334,11 @@
                 if (!currentFinds.some(f => f.title === item.title)) {
                     currentFinds.push(item);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
-                    updateBadge();
                 }
+
+                totalRightSwipes++;
+                localStorage.setItem('scout_total_swipes', totalRightSwipes);
+                updateUI();
 
                 const card = document.getElementById('activeSwipeCard');
                 if (card) {
@@ -352,7 +366,7 @@
             let currentX = 0;
 
             card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0].clientX;
+                startX = e.touches[0://clientX;
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
