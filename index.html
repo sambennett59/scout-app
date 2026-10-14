@@ -728,20 +728,24 @@
             btn.innerText = "Fetching...";
 
             try {
-                const { data, error } = await db.functions.invoke('scrape-preview', {
-                    body: { url: linkInput }
-                });
+                const response = await fetch(`https://api.microlink.io?url=${encodeURIComponent(linkInput)}`);
+                const json = await response.json();
 
-                if (error || !data || !data.image_url) {
-                    throw new Error("Could not automatically extract image from link.");
+                if (json.status === 'success' && json.data && json.data.image) {
+                    document.getElementById('fetchedImageUrl').value = json.data.image.url;
+                    
+                    if (json.data.title && !document.getElementById('itemTitle').value) {
+                        document.getElementById('itemTitle').value = json.data.title;
+                    }
+
+                    alert("Marketplace preview image fetched successfully!");
+                    btn.innerText = "Fetched ✔";
+                } else {
+                    throw new Error("No image found");
                 }
-
-                document.getElementById('fetchedImageUrl').value = data.image_url;
-                alert("Marketplace preview image successfully fetched!");
-                btn.innerText = "Fetched ✔";
             } catch (err) {
-                alert("Auto-fetch failed. Using default placeholder image.");
                 document.getElementById('fetchedImageUrl').value = "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
+                alert("Could not extract image automatically. Using clean fallback image.");
                 btn.innerText = "Fetch Image";
             }
         }
