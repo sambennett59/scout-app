@@ -44,7 +44,7 @@
                 <!-- TITLE -->
                 <div>
                     <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label>
-                    <input type="text" id="itemTitle" placeholder="e.g. Dyson V10 Absolute Vacuum" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                    <input type="text" id="itemTitle" placeholder="e.g. Test One" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
                 </div>
 
                 <!-- PRICE -->
@@ -93,7 +93,7 @@
                 <span class="text-[10px] font-semibold tracking-tight">Radars</span>
             </a>
             <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
-                <i class="fa-solid fa-user text-lg"></i>
+                <i class="fa-regular fa-user text-lg"></i>
                 <span class="text-[10px] font-semibold tracking-tight">Profile</span>
             </a>
         </nav>
@@ -126,40 +126,6 @@
             const formattedPrice = `£${parseFloat(rawPrice).toFixed(2)}`;
             const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : formattedPrice;
 
-            publishBtn.innerText = "Generating AI Vector Tags...";
-            publishBtn.disabled = true;
-
-            let itemEmbedding = null;
-            try {
-                const searchText = `${title} ${location} ${finalPrice}`;
-                
-                // Uses Supabase native function invoke handler to pass secure credentials safely
-                const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
-                    body: { text: searchText }
-                });
-
-                if (embedError) {
-                    alert("AI Embedding Error: " + (embedError.message || JSON.stringify(embedError)));
-                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
-                    publishBtn.disabled = false;
-                    return;
-                }
-
-                if (embedData && embedData.embedding) {
-                    itemEmbedding = embedData.embedding;
-                } else if (embedData && embedData.error) {
-                    alert("OpenAI Error: " + embedData.error);
-                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
-                    publishBtn.disabled = false;
-                    return;
-                }
-            } catch (e) {
-                alert("Client AI Error: " + e.message);
-                publishBtn.innerText = "Launch to Swipe Deck 🚀";
-                publishBtn.disabled = false;
-                return;
-            }
-
             publishBtn.innerText = "Uploading Image...";
             let imageUrl = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
 
@@ -183,7 +149,7 @@
                 imageUrl = publicUrlData.publicUrl;
             }
 
-            publishBtn.innerText = "Saving to Database...";
+            publishBtn.innerText = "Publishing Listing...";
 
             const newItem = {
                 title,
@@ -192,7 +158,7 @@
                 image_url: imageUrl,
                 external_link,
                 user_email: userEmail,
-                embedding: itemEmbedding,
+                embedding: null,
                 created_at: new Date().toISOString()
             };
 
@@ -203,7 +169,7 @@
                 publishBtn.innerText = "Launch to Swipe Deck 🚀";
                 publishBtn.disabled = false;
             } else {
-                alert("Bargain launched successfully with active AI vector tagging!");
+                alert("Bargain launched successfully!");
                 window.location.href = 'swipe.html';
             }
         });
