@@ -311,7 +311,7 @@
             <main class="px-6 py-4 flex-grow space-y-6">
                 <div class="space-y-4 bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5 relative">
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label><input type="text" id="itemTitle" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label><input type="text" id="itemPrice" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
+                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label><input type="text" id="itemPrice" placeholder="e.g. 5 or 12.50" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     
                     <div>
                         <div class="flex justify-between items-center mb-2">
@@ -374,9 +374,6 @@
         const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
         const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
-
-        // Put your OpenAI API Key here:
-        const OPENAI_API_KEY = 'YOUR_OPENAI_API_KEY_HERE';
 
         let currentUser = null;
         let userEmail = 'anonymous_user@scout.local';
@@ -504,7 +501,7 @@
             document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
         }
 
-        // Real OpenAI API Integration for Search Bar with Boost Prioritization
+        // Secure Supabase Edge Function AI Search Integration
         let currentSearchQuery = '';
         let currentMaxPrice = 1000;
         let currentLocationFilter = '';
@@ -517,41 +514,18 @@
             switchView('swipe');
 
             try {
-                const response = await fetch('https://api.openai.com/v1/chat/completions', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${OPENAI_API_KEY}`
-                    },
-                    body: JSON.stringify({
-                        model: 'gpt-4o-mini',
-                        messages: [
-                            {
-                                role: 'system',
-                                content: 'You are a search query parser for a secondhand bargain app. Extract search parameters from the user prompt and respond ONLY with a valid JSON object containing these three keys: "keyword" (string, main item searched), "max_price" (number or null if no price limit), "location" (string or null if no location filter).'
-                            },
-                            {
-                                role: 'user',
-                                content: input
-                            }
-                        ],
-                        response_format: { type: "json_object" }
-                    })
+                const { data, error } = await db.functions.invoke('parse-search', {
+                    body: { prompt: input }
                 });
 
-                const data = await response.json();
-                if (data.choices && data.choices[0]) {
-                    const parsed = JSON.parse(data.choices[0].message.content);
-                    currentSearchQuery = parsed.keyword ? parsed.keyword.toLowerCase() : '';
-                    currentMaxPrice = parsed.max_price !== null ? parseFloat(parsed.max_price) : 1000;
-                    currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
-                } else {
-                    currentSearchQuery = input.toLowerCase();
-                    currentMaxPrice = 1000;
-                    currentLocationFilter = '';
-                }
+                if (error) throw error;
+
+                currentSearchQuery = data.keyword ? data.keyword.toLowerCase() : '';
+                currentMaxPrice = data.max_price !== null ? parseFloat(data.max_price) : 1000;
+                currentLocationFilter = data.location ? data.location.toLowerCase() : '';
+
             } catch (err) {
-                console.error("OpenAI Error, falling back to raw text search:", err);
+                console.error("Edge Function Error, falling back to raw text search:", err);
                 currentSearchQuery = input.toLowerCase();
                 currentMaxPrice = 1000;
                 currentLocationFilter = '';
@@ -570,7 +544,6 @@
                 document.getElementById('deckHeaderTitle').innerText = `SEARCH: ${currentSearchQuery ? currentSearchQuery.toUpperCase() : 'ALL'}`;
             }
 
-            // Always order by is_boosted descending first so boosted items appear at the front of the queue
             let query = db.from('items').select('*').order('is_boosted', { ascending: false }).order('created_at', { ascending: false });
 
             const { data } = await query;
@@ -606,7 +579,6 @@
             });
 
             if (mode === 'surprise') {
-                // Keep boosted items at the front even for surprise mode if desired, or random shuffle standard items
                 const boostedItems = items.filter(i => i.is_boosted);
                 const standardItems = items.filter(i => !i.is_boosted).sort(() => Math.random() - 0.5);
                 items = [...boostedItems, ...standardItems];
@@ -947,13 +919,19 @@
             const fileInput = document.getElementById('itemImageFile');
 
             const title = titleEl.value.trim();
-            const price = priceEl.value.trim();
+            let rawPrice = priceEl.value.trim();
             const location = locationEl.value ? locationEl.value.trim() : "Crediton, Devon";
             const external_link = linkEl.value.trim();
 
-            if (!title || !price || !external_link) {
+            if (!title || !rawPrice || !external_link) {
                 alert("Please fill in the title, price, and marketplace link.");
                 return;
+            }
+
+            // Automatically format price with pound sign if omitted
+            let formattedPrice = rawPrice;
+            if (!formattedPrice.startsWith('£') && !formattedPrice.startsWith('€') && !formattedPrice.startsWith('\$')) {
+                formattedPrice = '£' + formattedPrice;
             }
 
             let imageUrl = "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
@@ -965,7 +943,7 @@
             const { error } = await db.from('items').insert([
                 {
                     title: title,
-                    price: price,
+                    price: formattedPrice,
                     location: location,
                     image_url: imageUrl,
                     external_link: external_link,
