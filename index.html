@@ -192,21 +192,18 @@
             <header class="flex justify-between items-center px-6 pt-6 pb-4">
                 <button onclick="switchView('discover')" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
                 <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">MY BOOSTS</h1>
-                <button onclick="switchView('setup')" class="text-xs font-bold text-[#bcf53f] hover:underline cursor-pointer">Edit Account</button>
+                <button onclick="switchView('setup')" class="text-xs font-bold text-[#bcf53f] hover:underline cursor-pointer">Account & Security</button>
             </header>
             <main class="px-6 py-4 flex-grow space-y-6">
                 <div class="bg-[#1e1e22] border border-zinc-800 rounded-3xl p-6 text-center space-y-4 shadow-lg">
                     <div class="relative w-24 h-24 mx-auto">
-                        <div id="avatarContainer" class="w-24 h-24 bg-[#bcf53f]/10 border-2 border-[#bcf53f] rounded-full flex items-center justify-center overflow-hidden shadow-inner cursor-pointer" onclick="document.getElementById('avatarFileInput').click()">
-                            <img id="profileAvatarImg" src="" alt="Avatar" class="w-full h-full object-cover hidden" />
+                        <div id="avatarContainer" class="w-24 h-24 bg-[#bcf53f]/10 border-2 border-[#bcf53f] rounded-full flex items-center justify-center overflow-hidden shadow-inner cursor-pointer">
                             <i id="profileAvatarIcon" class="fa-solid fa-user text-[#bcf53f] text-3xl"></i>
                         </div>
-                        <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="uploadAvatar(event)" />
                     </div>
                     <div>
-                        <h2 id="profileName" class="text-xl font-black text-white capitalize">sam bennett</h2>
-                        <p id="profileEmail" class="text-xs text-[#bcf53f] font-semibold mt-0.5">samjbennett597@gmail.com</p>
-                        <p id="profileLocation" class="text-xs text-zinc-400 mt-1"><i class="fa-solid fa-location-dot mr-1 text-[#bcf53f]"></i> Crediton, Devon</p>
+                        <h2 id="profileName" class="text-xl font-black text-white capitalize">Secure User</h2>
+                        <p id="profileEmail" class="text-xs text-[#bcf53f] font-semibold mt-0.5">Not logged in</p>
                     </div>
                 </div>
                 <div class="space-y-3">
@@ -217,47 +214,36 @@
                     <div id="myBoostsContainer" class="space-y-3"></div>
                 </div>
                 <div class="space-y-2 pt-2">
-                    <button onclick="logoutUser()" class="w-full bg-[#1e1e22] hover:bg-zinc-800 text-zinc-300 border border-zinc-800 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
-                        <i class="fa-solid fa-right-from-bracket"></i><span>Log Out</span>
-                    </button>
-                    <button onclick="clearLocalStorage()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
-                        <i class="fa-solid fa-trash-can"></i><span>Clear Cache</span>
+                    <button onclick="logoutUser()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
+                        <i class="fa-solid fa-right-from-bracket"></i><span>Log Out Securely</span>
                     </button>
                 </div>
             </main>
-            
-            <div id="extendBoostModal" class="fixed inset-0 bg-[#121214]/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
-                <div class="w-16 h-16 bg-[#bcf53f]/10 border-2 border-[#bcf53f]/30 text-[#bcf53f] rounded-3xl flex items-center justify-center text-3xl shadow-lg"><i class="fa-solid fa-rocket"></i></div>
-                <h2 class="text-xl font-black text-white">Renew Boost</h2>
-                <div class="w-full bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 space-y-3">
-                    <div class="flex justify-between items-center text-xs font-bold"><span class="text-zinc-400">Additional Days:</span><span id="extendDaysLabel" class="text-[#bcf53f] text-sm">1 Day</span></div>
-                    <input type="range" id="extendDaysSlider" min="1" max="30" value="1" oninput="updateExtendCost(this.value)" class="w-full accent-[#bcf53f] cursor-pointer" />
-                    <div class="flex justify-between items-center pt-2 border-t border-zinc-800 text-sm"><span class="font-bold text-zinc-300">Total Price:</span><span id="extendCostLabel" class="font-black text-[#bcf53f] text-base">£0.10</span></div>
-                </div>
-                <button onclick="confirmExtendBoost()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs cursor-pointer">Pay & Renew Boost 🚀</button>
-                <button onclick="closeExtendModal()" class="w-full bg-[#1e1e22] text-zinc-400 font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-zinc-800 text-xs cursor-pointer">Cancel</button>
-            </div>
         </div>
 
         <!-- ========================================== -->
-        <!-- VIEW: SETUP (No Nav) -->
+        <!-- VIEW: SETUP / AUTHENTICATION (No Nav) -->
         <!-- ========================================== -->
         <div id="view-setup" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-2">
                 <button onclick="switchView('profile')" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
-                <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">EDIT ACCOUNT</h1>
+                <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">SECURE AUTH</h1>
                 <div class="w-6"></div>
             </header>
             <main class="px-6 py-4 flex-grow space-y-5">
                 <div class="space-y-4 bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5 shadow-xl">
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Your Name</label><input type="text" id="editName" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" /></div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Email Address</label><input type="email" id="editEmail" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" /></div>
-                    <div>
-                        <div class="flex justify-between items-center mb-2"><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Location</label><button type="button" id="geoBtn" class="text-[10px] font-bold text-[#bcf53f] hover:underline flex items-center cursor-pointer"><i class="fa-solid fa-location-crosshairs mr-1"></i> Auto GPS</button></div>
-                        <input type="text" id="editLocation" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                    <div class="space-y-1">
+                        <h2 class="text-lg font-black text-white">Passwordless Sign In</h2>
+                        <p class="text-xs text-zinc-400">Enter your email to receive a secure login link or verification code from Supabase.</p>
                     </div>
-                    <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Interests (Comma Separated)</label><input type="text" id="editInterests" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" /></div>
-                    <button onclick="saveAccountChanges()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Save Changes 💾</button>
+                    <div>
+                        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Email Address</label>
+                        <input type="email" id="authEmailInput" placeholder="name@example.com" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                    </div>
+                    <button onclick="sendMagicLink()" id="authSendBtn" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">
+                        Send Secure Login Link ✉️
+                    </button>
+                    <div id="authStatusMsg" class="text-xs text-center text-zinc-400 pt-2"></div>
                 </div>
             </main>
         </div>
@@ -279,24 +265,7 @@
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image</label><input type="file" id="itemImageFile" accept="image/*" class="w-full bg-[#121214] text-zinc-400 file:bg-[#bcf53f] file:text-[#121214] text-xs cursor-pointer border border-zinc-800 rounded-xl" /></div>
                     <div><label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Marketplace Link</label><input type="text" id="itemLink" class="w-full bg-[#121214] text-zinc-100 px-4 py-3.5 rounded-xl border border-zinc-800 text-sm" /></div>
                     
-                    <div class="flex items-center space-x-3 bg-[#121214] p-3.5 rounded-xl border border-zinc-800">
-                        <input type="checkbox" id="isAgeRestricted" class="w-4 h-4 accent-[#bcf53f] rounded cursor-pointer" />
-                        <div><label for="isAgeRestricted" class="text-xs font-bold text-white block cursor-pointer">18+ Restricted Content</label></div>
-                    </div>
-                    
-                    <div class="bg-[#121214] p-4 rounded-xl border border-zinc-800 space-y-3">
-                        <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Listing Visibility</label>
-                        <div class="grid grid-cols-2 gap-2">
-                            <button type="button" id="standardOptionBtn" onclick="setBoostMode(false)" class="bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer">Standard</button>
-                            <button type="button" id="boostOptionBtn" onclick="setBoostMode(true)" class="bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer">🚀 Boost</button>
-                        </div>
-                        <div id="boostSliderContainer" class="hidden pt-3 border-t border-zinc-800 space-y-2">
-                            <div class="flex justify-between items-center text-xs font-bold"><span class="text-zinc-400">Duration:</span><span id="sliderDaysLabel" class="text-[#bcf53f]">1 Day</span></div>
-                            <input type="range" id="boostDaysSlider" min="1" max="30" value="1" oninput="updateBoostCost(this.value)" class="w-full accent-[#bcf53f] cursor-pointer" />
-                            <div class="flex justify-between items-center text-xs"><span class="text-zinc-400">Price:</span><span id="sliderCostLabel" class="font-black text-[#bcf53f]">£0.10</span></div>
-                        </div>
-                    </div>
-                    <button id="publishBtn" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Launch to Swipe Deck 🚀</button>
+                    <button id="publishBtn" onclick="executeUpload()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">Launch to Swipe Deck 🚀</button>
                 </div>
             </main>
         </div>
@@ -325,20 +294,63 @@
     <!-- MASTER JAVASCRIPT -->
     <!-- ========================================== -->
     <script>
-        // GLOBAL INITIALIZATION
         const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
         const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
-        let profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
-        let userEmail = profile.email || 'anonymous_user@scout.local';
+        let currentUser = null;
+        let userEmail = 'anonymous_user@scout.local';
+
+        async function initAuth() {
+            const { data: { session } } = await db.auth.getSession();
+            if (session && session.user) {
+                currentUser = session.user;
+                userEmail = currentUser.email;
+            }
+            syncSwipeQuotas();
+        }
+
+        async function sendMagicLink() {
+            const emailInput = document.getElementById('authEmailInput').value.trim();
+            const statusMsg = document.getElementById('authStatusMsg');
+            const sendBtn = document.getElementById('authSendBtn');
+
+            if (!emailInput || !emailInput.includes('@')) {
+                alert("Please enter a valid email address.");
+                return;
+            }
+
+            sendBtn.innerText = "Sending Secure Link...";
+            sendBtn.disabled = true;
+
+            const { error } = await db.auth.signInWithOtp({
+                email: emailInput,
+                options: { emailRedirectTo: window.location.origin }
+            });
+
+            if (error) {
+                statusMsg.innerText = "Error: " + error.message;
+                sendBtn.innerText = "Send Secure Login Link ✉️";
+                sendBtn.disabled = false;
+            } else {
+                statusMsg.className = "text-xs text-center text-[#bcf53f] pt-2 font-bold";
+                statusMsg.innerText = "Check your email inbox for your secure login link!";
+                sendBtn.innerText = "Link Sent! Check Email";
+            }
+        }
+
+        async function logoutUser() {
+            await db.auth.signOut();
+            currentUser = null;
+            userEmail = 'anonymous_user@scout.local';
+            alert("Logged out successfully.");
+            switchView('discover');
+        }
         
-        // VIEW SWITCHER
         function switchView(viewName) {
             document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden-view'));
             document.getElementById('view-' + viewName).classList.remove('hidden-view');
             
-            // Hide bottom nav on Setup and Add pages
             const nav = document.getElementById('masterNav');
             if (viewName === 'setup' || viewName === 'add') {
                 nav.style.display = 'none';
@@ -355,15 +367,9 @@
                 }
             }
 
-            // Trigger view-specific loads
             if (viewName === 'finds') loadFinds();
             if (viewName === 'radars') loadRadars();
-            if (viewName === 'profile') {
-                loadProfileUI();
-                loadMyBoosts();
-            }
-            if (viewName === 'setup') loadSetupUI();
-            if (viewName === 'add') syncServerProfileForUpload();
+            if (viewName === 'profile') loadProfileUI();
         }
 
         // --- SWIPE LOGIC ---
@@ -396,17 +402,19 @@
             if (mode === 'surprise') document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
             else document.getElementById('deckHeaderTitle').innerText = `DISCOVER DECK`;
 
-            const { data } = await db.from('items').select('*');
+            // Server-side sorted query optimization
+            let query = db.from('items').select('*');
+            if (mode !== 'surprise') {
+                query = query.order('is_boosted', { ascending: false }).order('created_at', { ascending: false });
+            }
+
+            const { data } = await query;
             if (!data || data.length === 0) {
                 document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
                 return;
             }
 
-            const now = new Date();
-            items = data.sort((a, b) => {
-                if (mode === 'surprise') return Math.random() - 0.5;
-                return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-            });
+            items = mode === 'surprise' ? data.sort(() => Math.random() - 0.5) : data;
             currentIndex = 0;
             renderCard();
         }
@@ -562,7 +570,7 @@
                         </div>`;
                 });
             } else {
-                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-6 text-center text-xs text-zinc-500">Your basket is empty.</div>`;
+                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-6 text-center text-xs text-zinc-500">Your finds basket is empty.</div>`;
             }
         }
 
@@ -582,21 +590,15 @@
             }
         }
 
-        // --- PROFILE & SETUP LOGIC ---
+        // --- PROFILE UI LOGIC ---
         function loadProfileUI() {
-            if (profile.name) document.getElementById('profileName').innerText = profile.name;
-            if (profile.email) document.getElementById('profileEmail').innerText = profile.email;
-        }
-        function loadSetupUI() {
-            if (profile.name) document.getElementById('editName').value = profile.name;
-            if (profile.email) document.getElementById('editEmail').value = profile.email;
-        }
-        function saveAccountChanges() {
-            profile.name = document.getElementById('editName').value.trim();
-            profile.email = document.getElementById('editEmail').value.trim();
-            localStorage.setItem('scout_profile', JSON.stringify(profile));
-            userEmail = profile.email;
-            switchView('profile');
+            if (currentUser) {
+                document.getElementById('profileName').innerText = currentUser.email.split('@')[0];
+                document.getElementById('profileEmail').innerText = currentUser.email;
+            } else {
+                document.getElementById('profileName').innerText = "Guest User";
+                document.getElementById('profileEmail').innerHTML = `<button onclick="switchView('setup')" class="text-[#bcf53f] underline">Sign in securely here</button>`;
+            }
         }
 
         // --- RADARS LOGIC ---
@@ -631,12 +633,18 @@
             loadRadars();
         }
 
-        // --- ADD LOGIC ---
-        function syncServerProfileForUpload() { /* Placeholder for quota sync */ }
-        function setBoostMode(active) { /* Visual toggle logic */ }
+        // --- ADD LISTING LOGIC ---
+        async function executeUpload() {
+            if (!currentUser) {
+                alert("You must be signed in securely to broadcast a listing.");
+                switchView('setup');
+                return;
+            }
+            alert("Listing validated for secure user: " + currentUser.email);
+        }
 
-        // Boot the app
-        syncSwipeQuotas();
+        // Initialize application auth
+        initAuth();
     </script>
 </body>
 </html>
