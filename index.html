@@ -1004,6 +1004,16 @@
                 return;
             }
 
+            // Enforce Boost Payment Paywall if Boost is Active
+            if (isBoostedActive) {
+                const days = document.getElementById('boostDaysSlider').value;
+                const cost = (days * 0.10).toFixed(2);
+                const confirmed = confirm(`🚀 Boost Listing Checkout:\n\nConfirm payment of £${cost} for ${days} ${days == 1 ? 'Day' : 'Days'} of top-priority queue placement?`);
+                if (!confirmed) {
+                    return; // Cancel upload if payment is declined
+                }
+            }
+
             let formattedPrice = rawPrice;
             if (!formattedPrice.startsWith('£') && !formattedPrice.startsWith('€') && !formattedPrice.startsWith('\$')) {
                 formattedPrice = '£' + formattedPrice;
@@ -1030,7 +1040,7 @@
             if (error) {
                 alert("Error launching listing: " + error.message);
             } else {
-                alert("Listing successfully launched to the Swipe Deck!");
+                alert(isBoostedActive ? "Boost payment successful! Listing launched to the absolute front of the queue 🚀" : "Listing successfully launched to the Swipe Deck!");
                 titleEl.value = '';
                 priceEl.value = '';
                 linkEl.value = '';
