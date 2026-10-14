@@ -1,175 +1,332 @@
-<script>
-    const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
-    const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
-    const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SCOUT — Broadcast Listing</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#bcf53f">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <style>
+        body { background-color: #0d0d0d; overflow-x: hidden; }
+        .phone-container {
+            max-width: 430px; min-height: 100vh;
+            background-color: #121214; box-shadow: 0 0 24px rgba(0,0,0,0.8);
+            margin: 0 auto; position: relative; padding-bottom: 110px;
+        }
+    </style>
+</head>
+<body class="text-white font-sans antialiased">
 
-    const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
-    const userEmail = profile.email || 'anonymous_user@scout.local';
+    <div class="phone-container flex flex-col">
+        
+        <!-- HEADER -->
+        <header class="flex justify-between items-center px-6 pt-6 pb-4">
+            <a href="index.html" class="text-zinc-400 hover:text-white text-xl"><i class="fa-solid fa-chevron-left"></i></a>
+            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">BROADCAST LISTING</h1>
+            <span id="uploadCounterBadge" class="text-[10px] bg-zinc-800 text-zinc-300 font-bold px-2.5 py-1 rounded-full">Monthly Limit: 0/20</span>
+        </header>
 
-    let uploadCount = 0;
-    const monthlyLimit = 20;
-    const currentMonthStr = new Date().toISOString().substring(0, 7);
+        <!-- MAIN CONTENT -->
+        <main class="px-6 py-4 flex-grow space-y-6">
+            <div class="mb-2">
+                <h2 class="text-2xl font-black text-white">Share a Bargain</h2>
+                <p class="text-xs text-zinc-400 mt-1">First 20 listings each month are free. Broadcast your finds to the community deck.</p>
+            </div>
 
-    async function syncServerProfile() {
-        try {
-            let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
-            
-            if (!data) {
-                const { data: newProfile } = await db.from('profiles').insert([{
-                    email: userEmail,
-                    upload_count: 0,
-                    upload_month: currentMonthStr,
-                    right_swipes: 0,
-                    swipe_date: new Date().toISOString().split('T')[0]
-                }]).select().maybeSingle();
-                data = newProfile;
+            <!-- FORM CONTAINER -->
+            <div class="space-y-4 bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5 relative">
+                
+                <!-- TITLE -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Item Title</label>
+                    <input type="text" id="itemTitle" placeholder="e.g. Dyson V10 Absolute" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- PRICE -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Price (£)</label>
+                    <input type="text" id="itemPrice" placeholder="e.g. 45.00" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- LOCATION -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Location</label>
+                    <input type="text" id="itemLocation" placeholder="Crediton, Devon" value="Crediton, Devon" class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- IMAGE FILE UPLOAD -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Upload Image</label>
+                    <input type="file" id="itemImageFile" accept="image/*" class="w-full bg-[#121214] text-zinc-400 file:mr-4 file:py-2.5 file:px-4 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-[#bcf53f] file:text-[#121214] hover:file:bg-[#adff2f] text-xs cursor-pointer border border-zinc-800 rounded-xl" />
+                </div>
+
+                <!-- EXTERNAL LINK -->
+                <div>
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400 mb-2">Marketplace Link (Buy URL)</label>
+                    <input type="text" id="itemLink" placeholder="https://..." class="w-full bg-[#121214] text-zinc-100 placeholder-zinc-600 px-4 py-3.5 rounded-xl border border-zinc-800 focus:outline-none focus:border-[#bcf53f] text-sm" />
+                </div>
+
+                <!-- 18+ AGE RESTRICTED TOGGLE -->
+                <div class="flex items-center space-x-3 bg-[#121214] p-3.5 rounded-xl border border-zinc-800">
+                    <input type="checkbox" id="isAgeRestricted" class="w-4 h-4 accent-[#bcf53f] rounded cursor-pointer" />
+                    <div>
+                        <label for="isAgeRestricted" class="text-xs font-bold text-white block cursor-pointer">18+ Restricted Content</label>
+                        <span class="text-[10px] text-zinc-500 block">Tobacco, alcohol, or age-restricted items (blurs image in feed).</span>
+                    </div>
+                </div>
+
+                <!-- LISTING VISIBILITY / BOOST OPTIONS -->
+                <div class="bg-[#121214] p-4 rounded-xl border border-zinc-800 space-y-3">
+                    <label class="block text-xs font-bold uppercase tracking-wider text-zinc-400">Listing Visibility</label>
+                    
+                    <div class="grid grid-cols-2 gap-2">
+                        <button type="button" id="standardOptionBtn" onclick="setBoostMode(false)" class="bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer">
+                            Standard (Free)
+                        </button>
+                        <button type="button" id="boostOptionBtn" onclick="setBoostMode(true)" class="bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer">
+                            🚀 Boost Post
+                        </button>
+                    </div>
+
+                    <!-- SLIDER CONTAINER -->
+                    <div id="boostSliderContainer" class="hidden pt-3 border-t border-zinc-800 space-y-2">
+                        <div class="flex justify-between items-center text-xs font-bold">
+                            <span class="text-zinc-400">Boost Duration:</span>
+                            <span id="sliderDaysLabel" class="text-[#bcf53f]">1 Day</span>
+                        </div>
+                        <input type="range" id="boostDaysSlider" min="1" max="30" value="1" oninput="updateBoostCost(this.value)" class="w-full accent-[#bcf53f] cursor-pointer" />
+                        <div class="flex justify-between items-center text-xs">
+                            <span class="text-zinc-400">Boost Price (10p / day):</span>
+                            <span id="sliderCostLabel" class="font-black text-[#bcf53f]">£0.10</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- SUBMIT BUTTON -->
+                <button id="publishBtn" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer">
+                    Launch to Swipe Deck 🚀
+                </button>
+            </div>
+
+            <!-- MONTHLY LIMIT PAYWALL MODAL -->
+            <div id="uploadPaywallModal" class="fixed inset-0 bg-[#121214]/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
+                <div class="w-16 h-16 bg-[#bcf53f]/10 border-2 border-[#bcf53f]/30 text-[#bcf53f] rounded-3xl flex items-center justify-center text-3xl shadow-lg">
+                    <i class="fa-solid fa-store-slash"></i>
+                </div>
+                <div class="space-y-1">
+                    <h2 class="text-xl font-black text-white">Monthly Limit Reached</h2>
+                    <p class="text-xs text-zinc-400 px-2">You've hit your 20 free monthly listings. Pay 49p to publish this item.</p>
+                </div>
+                <button onclick="payForListing()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs cursor-pointer">
+                    Pay 49p & Publish Listing
+                </button>
+                <button onclick="closeUploadPaywall()" class="w-full bg-[#1e1e22] text-zinc-400 font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-zinc-800 text-xs cursor-pointer">
+                    Cancel
+                </button>
+            </div>
+        </main>
+
+        <!-- BOTTOM TAB NAVIGATION -->
+        <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
+            <a href="index.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-compass text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Discover</span>
+            </a>
+            <a href="finds.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-heart text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Finds</span>
+            </a>
+            <a href="radars.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-bullseye text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Radars</span>
+            </a>
+            <a href="profile.html" class="flex flex-col items-center space-y-1 text-zinc-500 hover:text-zinc-300 transition">
+                <i class="fa-solid fa-user text-lg"></i>
+                <span class="text-[10px] font-semibold tracking-tight">Profile</span>
+            </a>
+        </nav>
+
+    </div>
+
+    <script>
+        const supabaseUrl = 'https://aiojzwzykvuaxepfjwhr.supabase.co';
+        const supabaseKey = 'sb_publishable_jZmHhXFrFBvpqGRjqBlBEg_uZ_TtQyA';
+        const db = window.supabase.createClient(supabaseUrl, supabaseKey);
+
+        const profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
+        const userEmail = profile.email || 'anonymous_user@scout.local';
+
+        let uploadCount = 0;
+        const monthlyLimit = 20;
+        const currentMonthStr = new Date().toISOString().substring(0, 7);
+
+        async function syncServerProfile() {
+            try {
+                let { data, error } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
+                
+                if (!data) {
+                    const { data: newProfile } = await db.from('profiles').insert([{
+                        email: userEmail,
+                        upload_count: 0,
+                        upload_month: currentMonthStr,
+                        right_swipes: 0,
+                        swipe_date: new Date().toISOString().split('T')[0]
+                    }]).select().maybeSingle();
+                    data = newProfile;
+                }
+
+                if (data) {
+                    if (data.upload_month !== currentMonthStr) {
+                        await db.from('profiles').update({ upload_count: 0, upload_month: currentMonthStr }).eq('email', userEmail);
+                        uploadCount = 0;
+                    } else {
+                        uploadCount = data.upload_count || 0;
+                    }
+                }
+            } catch (e) {
+                console.log("Profile sync fallback active:", e);
+            }
+            document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${uploadCount}/${monthlyLimit}`;
+        }
+        syncServerProfile();
+
+        let isBoostActive = false;
+
+        window.setBoostMode = function(boosted) {
+            isBoostActive = boosted;
+            const standardBtn = document.getElementById('standardOptionBtn');
+            const boostBtn = document.getElementById('boostOptionBtn');
+            const sliderContainer = document.getElementById('boostSliderContainer');
+
+            if (boosted) {
+                boostBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
+                standardBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
+                sliderContainer.classList.remove('hidden');
+            } else {
+                standardBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
+                boostBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
+                sliderContainer.classList.add('hidden');
+            }
+        }
+
+        window.updateBoostCost = function(days) {
+            document.getElementById('sliderDaysLabel').innerText = `${days} Day${days > 1 ? 's' : ''}`;
+            const cost = (days * 0.10).toFixed(2);
+            document.getElementById('sliderCostLabel').innerText = `£${cost}`;
+        }
+
+        const publishBtn = document.getElementById('publishBtn');
+
+        publishBtn.addEventListener('click', async () => {
+            const title = document.getElementById('itemTitle').value.trim();
+            let rawPrice = document.getElementById('itemPrice').value.trim();
+            const external_link = document.getElementById('itemLink').value.trim();
+
+            if (!title || !rawPrice || !external_link) {
+                alert("Please fill in the title, price, and marketplace link.");
+                return;
             }
 
-            if (data) {
-                if (data.upload_month !== currentMonthStr) {
-                    await db.from('profiles').update({ upload_count: 0, upload_month: currentMonthStr }).eq('email', userEmail);
-                    uploadCount = 0;
+            if (uploadCount >= monthlyLimit) {
+                document.getElementById('uploadPaywallModal').classList.remove('hidden');
+                return;
+            }
+
+            executeUpload();
+        });
+
+        window.payForListing = function() {
+            if (confirm("Confirm 49p payment for extra monthly listing slot?")) {
+                document.getElementById('uploadPaywallModal').classList.add('hidden');
+                executeUpload();
+            }
+        }
+
+        window.closeUploadPaywall = function() {
+            document.getElementById('uploadPaywallModal').classList.add('hidden');
+        }
+
+        async function executeUpload() {
+            publishBtn.innerText = "Launching to Deck...";
+            publishBtn.disabled = true;
+
+            const title = document.getElementById('itemTitle').value.trim();
+            let rawPrice = document.getElementById('itemPrice').value.trim();
+            const location = document.getElementById('itemLocation').value.trim();
+            const imageFileInput = document.getElementById('itemImageFile');
+            const external_link = document.getElementById('itemLink').value.trim();
+            const isAgeRestricted = document.getElementById('isAgeRestricted').checked;
+
+            let boostExpiresAt = null;
+            if (isBoostActive) {
+                const days = parseInt(document.getElementById('boostDaysSlider').value);
+                const boostCost = (days * 0.10).toFixed(2);
+                if (confirm(`🔒 Secure Checkout\n\nConfirm payment of £${boostCost} to boost this post for ${days} day${days > 1 ? 's' : ''}?`)) {
+                    const expiry = new Date();
+                    expiry.setDate(expiry.getDate() + days);
+                    boostExpiresAt = expiry.toISOString();
                 } else {
-                    uploadCount = data.upload_count || 0;
+                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                    publishBtn.disabled = false;
+                    return;
                 }
             }
-        } catch (e) {
-            console.log("Profile sync fallback active:", e);
-        }
-        document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${uploadCount}/${monthlyLimit}`;
-    }
-    syncServerProfile();
 
-    let isBoostActive = false;
+            rawPrice = rawPrice.replace('£', '').trim();
+            const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : `£${parseFloat(rawPrice).toFixed(2)}`;
 
-    window.setBoostMode = function(boosted) {
-        isBoostActive = boosted;
-        const standardBtn = document.getElementById('standardOptionBtn');
-        const boostBtn = document.getElementById('boostOptionBtn');
-        const sliderContainer = document.getElementById('boostSliderContainer');
+            let imageUrl = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
 
-        if (boosted) {
-            boostBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
-            standardBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
-            sliderContainer.classList.remove('hidden');
-        } else {
-            standardBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer";
-            boostBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer";
-            sliderContainer.classList.add('hidden');
-        }
-    }
+            if (imageFileInput.files && imageFileInput.files[0]) {
+                const file = imageFileInput.files[0];
+                const fileExt = file.name.split('.').pop();
+                const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
+                
+                const { error: uploadError } = await db.storage.from('item-images').upload(fileName, file);
+                if (uploadError) {
+                    alert("Image upload failed. Please try again.");
+                    publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                    publishBtn.disabled = false;
+                    return;
+                }
 
-    window.updateBoostCost = function(days) {
-        document.getElementById('sliderDaysLabel').innerText = `${days} Day${days > 1 ? 's' : ''}`;
-        const cost = (days * 0.10).toFixed(2);
-        document.getElementById('sliderCostLabel').innerText = `£${cost}`;
-    }
+                const { data: publicUrlData } = db.storage.from('item-images').getPublicUrl(fileName);
+                imageUrl = publicUrlData.publicUrl;
+            }
 
-    const publishBtn = document.getElementById('publishBtn');
+            const newItem = {
+                title,
+                price: finalPrice,
+                location,
+                image_url: imageUrl,
+                external_link,
+                user_email: userEmail,
+                is_restricted: isAgeRestricted,
+                is_boosted: !!boostExpiresAt,
+                boost_expires_at: boostExpiresAt,
+                embedding: null,
+                created_at: new Date().toISOString()
+            };
 
-    publishBtn.addEventListener('click', async () => {
-        const title = document.getElementById('itemTitle').value.trim();
-        let rawPrice = document.getElementById('itemPrice').value.trim();
-        const external_link = document.getElementById('itemLink').value.trim();
+            const { error: insertError } = await db.from('items').insert([newItem]);
 
-        if (!title || !rawPrice || !external_link) {
-            alert("Please fill in the title, price, and marketplace link.");
-            return;
-        }
-
-        if (uploadCount >= monthlyLimit) {
-            document.getElementById('uploadPaywallModal').classList.remove('hidden');
-            return;
-        }
-
-        executeUpload();
-    });
-
-    window.payForListing = function() {
-        if (confirm("Confirm 49p payment for extra monthly listing slot?")) {
-            document.getElementById('uploadPaywallModal').classList.add('hidden');
-            executeUpload();
-        }
-    }
-
-    window.closeUploadPaywall = function() {
-        document.getElementById('uploadPaywallModal').classList.add('hidden');
-    }
-
-    async function executeUpload() {
-        publishBtn.innerText = "Launching to Deck...";
-        publishBtn.disabled = true;
-
-        const title = document.getElementById('itemTitle').value.trim();
-        let rawPrice = document.getElementById('itemPrice').value.trim();
-        const location = document.getElementById('itemLocation').value.trim();
-        const imageFileInput = document.getElementById('itemImageFile');
-        const external_link = document.getElementById('itemLink').value.trim();
-        const isAgeRestricted = document.getElementById('isAgeRestricted').checked;
-
-        let boostExpiresAt = null;
-        if (isBoostActive) {
-            const days = parseInt(document.getElementById('boostDaysSlider').value);
-            const boostCost = (days * 0.10).toFixed(2);
-            if (confirm(`🔒 Secure Checkout\n\nConfirm payment of £${boostCost} to boost this post for ${days} day${days > 1 ? 's' : ''}?`)) {
-                const expiry = new Date();
-                expiry.setDate(expiry.getDate() + days);
-                boostExpiresAt = expiry.toISOString();
+            if (insertError) {
+                alert("Error launching listing. Please try again.");
+                publishBtn.innerText = "Launch to Swipe Deck 🚀";
+                publishBtn.disabled = false;
             } else {
-                publishBtn.innerText = "Launch to Swipe Deck 🚀";
-                publishBtn.disabled = false;
-                return;
+                uploadCount++;
+                await db.from('profiles').update({ upload_count: uploadCount }).eq('email', userEmail);
+
+                alert("Bargain launched successfully! 🚀");
+                window.location.href = 'swipe.html';
             }
         }
-
-        rawPrice = rawPrice.replace('£', '').trim();
-        const finalPrice = isNaN(parseFloat(rawPrice)) ? rawPrice : `£${parseFloat(rawPrice).toFixed(2)}`;
-
-        let imageUrl = 'https://images.unsplash.com/photo-1526170375885-4d8ecf77b99f?auto=format&fit=crop&w=600&q=80';
-
-        if (imageFileInput.files && imageFileInput.files[0]) {
-            const file = imageFileInput.files[0];
-            const fileExt = file.name.split('.').pop();
-            const fileName = `${Date.now()}_${Math.random().toString(36).substring(2)}.${fileExt}`;
-            
-            const { error: uploadError } = await db.storage.from('item-images').upload(fileName, file);
-            if (uploadError) {
-                alert("Image upload failed. Please try again.");
-                publishBtn.innerText = "Launch to Swipe Deck 🚀";
-                publishBtn.disabled = false;
-                return;
-            }
-
-            const { data: publicUrlData } = db.storage.from('item-images').getPublicUrl(fileName);
-            imageUrl = publicUrlData.publicUrl;
-        }
-
-        const newItem = {
-            title,
-            price: finalPrice,
-            location,
-            image_url: imageUrl,
-            external_link,
-            user_email: userEmail,
-            is_restricted: isAgeRestricted,
-            is_boosted: !!boostExpiresAt,
-            boost_expires_at: boostExpiresAt,
-            embedding: null,
-            created_at: new Date().toISOString()
-        };
-
-        const { error: insertError } = await db.from('items').insert([newItem]);
-
-        if (insertError) {
-            alert("Error launching listing. Please try again.");
-            publishBtn.innerText = "Launch to Swipe Deck 🚀";
-            publishBtn.disabled = false;
-        } else {
-            uploadCount++;
-            await db.from('profiles').update({ upload_count: uploadCount }).eq('email', userEmail);
-
-            alert("Bargain launched successfully! 🚀");
-            window.location.href = 'swipe.html';
-        }
-    }
-</script>
+    </script>
+</body>
+</html>
