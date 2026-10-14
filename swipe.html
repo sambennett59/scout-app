@@ -260,9 +260,10 @@
             if (!card) return;
 
             if (direction === 'right') {
-                // 1. Immediately save item to basket
-                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
+
+                // 1. Immediately save item to basket matching finds.html expectations
+                let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 if (!currentFinds.some(f => f.title === item.title)) {
                     currentFinds.push(item);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
