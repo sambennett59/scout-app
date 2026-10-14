@@ -129,18 +129,24 @@
             publishBtn.innerText = "Generating AI Concept Tags...";
             publishBtn.disabled = true;
 
-            // Securely calls Supabase Edge Function using uppercase GET_EMBEDDING
             let itemEmbedding = null;
             try {
                 const searchText = `${title} ${location} ${finalPrice}`;
                 const { data: embedData, error: embedError } = await db.functions.invoke('GET_EMBEDDING', {
                     body: { text: searchText }
                 });
-                if (!embedError && embedData) {
+                
+                if (embedError) {
+                    console.error("Supabase Function Error:", embedError);
+                    alert("Function Error: " + JSON.stringify(embedError));
+                } else if (embedData && embedData.embedding) {
                     itemEmbedding = embedData.embedding;
+                } else {
+                    alert("Function returned no embedding data.");
                 }
             } catch (e) {
-                console.error("Embedding generation warning:", e);
+                console.error("Network or Client Error:", e);
+                alert("Client Error calling AI: " + e.message);
             }
 
             publishBtn.innerText = "Uploading Image...";
