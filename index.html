@@ -109,7 +109,7 @@
                 <input type="range" id="filterPriceRange" min="10" max="1000" step="10" value="1000" oninput="document.getElementById('filterPriceVal').innerText = '£' + (this.value == 1000 ? 'Any' : this.value)" class="w-full accent-scout-neon cursor-pointer" />
             </div>
 
-            <button onclick="document.getElementById('filterModal').classList.add('hidden')" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-xs cursor-pointer">
+            <button onclick="applyFiltersAndExplore()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition text-xs cursor-pointer">
                 Apply Filters & Explore 🚀
             </button>
             <button onclick="document.getElementById('filterModal').classList.add('hidden')" class="text-xs text-zinc-500 underline cursor-pointer">Cancel</button>
@@ -501,10 +501,23 @@
             document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
         }
 
-        // Smart Natural Language Parsing Search (Instant & Reliable)
+        // Search & Filter State
         let currentSearchQuery = '';
         let currentMaxPrice = 1000;
         let currentLocationFilter = '';
+
+        function applyFiltersAndExplore() {
+            document.getElementById('filterModal').classList.add('hidden');
+            const maxPriceVal = parseFloat(document.getElementById('filterPriceRange').value);
+            const maxDistVal = document.getElementById('filterDistanceRange').value;
+            
+            currentMaxPrice = maxPriceVal;
+            currentSearchQuery = '';
+            currentLocationFilter = '';
+
+            loadDeck('filtered');
+            switchView('swipe');
+        }
 
         function handleOpenAISearch(rawInput) {
             const input = rawInput.toLowerCase().trim();
@@ -517,13 +530,11 @@
             currentMaxPrice = 1000;
             currentLocationFilter = '';
 
-            // 1. Extract Price (e.g. "under 5", "less than £10", "below 20")
             const priceMatch = input.match(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?(\d+)/);
             if (priceMatch) {
                 currentMaxPrice = parseFloat(priceMatch[1]);
             }
 
-            // 2. Extract Location (e.g. "in crediton", "near exeter")
             const locMatch = input.match(/(?:in|near|around)\s+([a-z\s]+)(?=\s+under|\s+less|\s+below|\$)/);
             if (locMatch) {
                 currentLocationFilter = locMatch[1].trim();
@@ -531,7 +542,6 @@
                 currentLocationFilter = 'crediton';
             }
 
-            // 3. Extract Core Keyword / Item
             let cleaned = input
                 .replace(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?\d+/g, '')
                 .replace(/(?:in|near|around)\s+[a-z\s]+/g, '')
@@ -554,11 +564,17 @@
         }
 
         async function loadDeck(mode = 'standard') {
+            const maxDistVal = document.getElementById('filterDistanceRange').value;
+            const globalFilterMaxPrice = parseFloat(document.getElementById('filterPriceRange').value);
+
             if (mode === 'surprise') {
                 document.getElementById('deckHeaderTitle').innerText = `SURPRISE DECK`;
                 currentSearchQuery = '';
                 currentMaxPrice = 1000;
                 currentLocationFilter = '';
+            } else if (mode === 'filtered') {
+                const priceLabel = currentMaxPrice >= 1000 ? 'ANY PRICE' : `MAX £${currentMaxPrice}`;
+                document.getElementById('deckHeaderTitle').innerText = `FILTERED (${priceLabel} • ${maxDistVal} MILES)`;
             } else {
                 document.getElementById('deckHeaderTitle').innerText = `SEARCH: ${currentSearchQuery ? currentSearchQuery.toUpperCase() : 'ALL'}`;
             }
@@ -571,7 +587,6 @@
                 return;
             }
 
-            const globalFilterMaxPrice = parseFloat(document.getElementById('filterPriceRange').value);
             const effectiveMaxPrice = Math.min(currentMaxPrice, globalFilterMaxPrice);
             
             items = data.filter(item => {
