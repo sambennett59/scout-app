@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SCOUT — Profile</title>
+    <title>SCOUT — My Boosts</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -23,29 +23,26 @@
 
     <div class="phone-container flex flex-col">
         
-        <!-- HEADER WITH DYNAMIC HISTORY BACK -->
+        <!-- HEADER -->
         <header class="flex justify-between items-center px-6 pt-6 pb-4">
             <button onclick="history.back()" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
-            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">MY PROFILE</h1>
+            <h1 class="text-lg font-black tracking-tight text-[#bcf53f]">MY BOOSTS</h1>
             <a href="setup.html" class="text-xs font-bold text-[#bcf53f] hover:underline">Edit Account</a>
         </header>
 
         <!-- MAIN CONTENT -->
         <main class="px-6 py-4 flex-grow space-y-6">
             
-            <!-- USER CARD WITH AVATAR & STAT BUTTONS -->
+            <!-- USER CARD -->
             <div class="bg-[#1e1e22] border border-zinc-800 rounded-3xl p-6 text-center space-y-4 shadow-lg">
                 <div class="relative w-24 h-24 mx-auto">
-                    <!-- AVATAR IMAGE / ICON -->
                     <div id="avatarContainer" class="w-24 h-24 bg-[#bcf53f]/10 border-2 border-[#bcf53f] rounded-full flex items-center justify-center overflow-hidden shadow-inner cursor-pointer" onclick="document.getElementById('avatarFileInput').click()">
                         <img id="profileAvatarImg" src="" alt="Avatar" class="w-full h-full object-cover hidden" />
                         <i id="profileAvatarIcon" class="fa-solid fa-user text-[#bcf53f] text-3xl"></i>
                     </div>
-                    <!-- PLUS BADGE -->
                     <button onclick="document.getElementById('avatarFileInput').click()" class="absolute bottom-0 right-0 w-8 h-8 bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] rounded-full flex items-center justify-center shadow-md border-2 border-[#121214] transition cursor-pointer">
                         <i class="fa-solid fa-plus text-xs font-black"></i>
                     </button>
-                    <!-- HIDDEN FILE INPUT -->
                     <input type="file" id="avatarFileInput" accept="image/*" class="hidden" onchange="uploadAvatar(event)" />
                 </div>
 
@@ -54,80 +51,19 @@
                     <p id="profileEmail" class="text-xs text-[#bcf53f] font-semibold mt-0.5">samjbennett597@gmail.com</p>
                     <p id="profileLocation" class="text-xs text-zinc-400 mt-1"><i class="fa-solid fa-location-dot mr-1 text-[#bcf53f]"></i> Crediton, Devon</p>
                 </div>
-                
-                <!-- INTERESTS PILLS -->
-                <div class="space-y-2">
-                    <div id="profileInterestsContainer" class="flex flex-wrap justify-center gap-1.5"></div>
-                </div>
-
-                <!-- CLICKABLE STAT BUTTONS (SAVED FINDS & ACTIVE RADARS) -->
-                <div class="grid grid-cols-2 gap-3 pt-3 border-t border-zinc-800/80">
-                    <a href="finds.html" class="bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/80 rounded-2xl p-3 text-center block transition cursor-pointer">
-                        <span id="findsCount" class="text-lg font-black text-[#bcf53f] block">0</span>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Saved Finds</span>
-                    </a>
-                    <a href="radars.html" class="bg-zinc-900/60 hover:bg-zinc-800/80 border border-zinc-800/80 rounded-2xl p-3 text-center block transition cursor-pointer">
-                        <span id="radarsCount" class="text-lg font-black text-[#bcf53f] block">0</span>
-                        <span class="text-[10px] font-bold uppercase tracking-wider text-zinc-400">Active Radars</span>
-                    </a>
-                </div>
             </div>
 
-            <!-- MY ACTIVE LISTINGS SECTION -->
+            <!-- MY BOOSTS SECTION -->
             <div class="space-y-3">
                 <div class="flex justify-between items-center px-1">
-                    <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400">My Broadcast Listings (90-Day Expiry)</h3>
-                    <a href="add.html" class="text-[10px] font-bold text-[#bcf53f] hover:underline">+ Add New</a>
+                    <h3 class="text-xs font-bold uppercase tracking-wider text-[#bcf53f]">🚀 Active Boosts</h3>
+                    <a href="add.html" class="text-[10px] font-bold text-[#bcf53f] hover:underline">+ New Boosted Post</a>
                 </div>
-                <div id="myListingsContainer" class="space-y-3">
+                <div id="myBoostsContainer" class="space-y-3">
                     <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">
-                        Loading your listings...
+                        Loading your boosts...
                     </div>
                 </div>
-            </div>
-
-            <!-- QUICK ACTIONS / LINKS -->
-            <div class="space-y-3 pt-2">
-                <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 px-1">Manage</h3>
-                
-                <a href="setup.html" class="bg-[#1e1e22] hover:bg-[#25252b] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between transition block">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-[#bcf53f]/10 text-[#bcf53f] rounded-xl flex items-center justify-center">
-                            <i class="fa-solid fa-pen-to-square"></i>
-                        </div>
-                        <div>
-                            <span class="font-bold text-sm text-white block">Edit Account & Interests</span>
-                            <span class="text-[10px] text-zinc-400">Update categories, email, & location</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-xs text-zinc-600"></i>
-                </a>
-
-                <a href="finds.html" class="bg-[#1e1e22] hover:bg-[#25252b] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between transition block">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-red-500/10 text-red-500 rounded-xl flex items-center justify-center">
-                            <i class="fa-solid fa-heart"></i>
-                        </div>
-                        <div>
-                            <span class="font-bold text-sm text-white block">My Finds Basket</span>
-                            <span class="text-[10px] text-zinc-400">View your swiped bargains</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-xs text-zinc-600"></i>
-                </a>
-
-                <a href="radars.html" class="bg-[#1e1e22] hover:bg-[#25252b] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between transition block">
-                    <div class="flex items-center space-x-3">
-                        <div class="w-10 h-10 bg-[#bcf53f]/10 text-[#bcf53f] rounded-xl flex items-center justify-center">
-                            <i class="fa-solid fa-bullseye"></i>
-                        </div>
-                        <div>
-                            <span class="font-bold text-sm text-white block">My Radars</span>
-                            <span class="text-[10px] text-zinc-400">Manage automated search alerts</span>
-                        </div>
-                    </div>
-                    <i class="fa-solid fa-chevron-right text-xs text-zinc-600"></i>
-                </a>
             </div>
 
             <!-- LOGOUT & RESET -->
@@ -138,15 +74,41 @@
                 </button>
                 <button onclick="clearLocalStorage()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
                     <i class="fa-solid fa-trash-can"></i>
-                    <span>Clear Cache & Temp Data</span>
-                </button>
-                <button onclick="devHardReset()" class="w-full bg-amber-500/10 hover:bg-amber-500/20 text-amber-400 border border-amber-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
-                    <i class="fa-solid fa-triangle-exclamation"></i>
-                    <span>Dev Hard Reset (Wipe All Limits)</span>
+                    <span>Clear Cache</span>
                 </button>
             </div>
 
         </main>
+
+        <!-- EXTEND BOOST MODAL -->
+        <div id="extendBoostModal" class="fixed inset-0 bg-[#121214]/95 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
+            <div class="w-16 h-16 bg-[#bcf53f]/10 border-2 border-[#bcf53f]/30 text-[#bcf53f] rounded-3xl flex items-center justify-center text-3xl shadow-lg">
+                <i class="fa-solid fa-rocket"></i>
+            </div>
+            <div class="space-y-1">
+                <h2 class="text-xl font-black text-white">Renew Boost</h2>
+                <p class="text-xs text-zinc-400 px-2">Extend your boost to keep your item pinned near the front. 10p per day.</p>
+            </div>
+
+            <div class="w-full bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 space-y-3">
+                <div class="flex justify-between items-center text-xs font-bold">
+                    <span class="text-zinc-400">Additional Days:</span>
+                    <span id="extendDaysLabel" class="text-[#bcf53f] text-sm">1 Day</span>
+                </div>
+                <input type="range" id="extendDaysSlider" min="1" max="30" value="1" oninput="updateExtendCost(this.value)" class="w-full accent-[#bcf53f] cursor-pointer" />
+                <div class="flex justify-between items-center pt-2 border-t border-zinc-800 text-sm">
+                    <span class="font-bold text-zinc-300">Total Price:</span>
+                    <span id="extendCostLabel" class="font-black text-[#bcf53f] text-base">£0.10</span>
+                </div>
+            </div>
+
+            <button onclick="confirmExtendBoost()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs cursor-pointer">
+                Pay & Renew Boost 🚀
+            </button>
+            <button onclick="closeExtendModal()" class="w-full bg-[#1e1e22] text-zinc-400 font-bold uppercase tracking-wider py-3.5 rounded-2xl border border-zinc-800 text-xs cursor-pointer">
+                Cancel
+            </button>
+        </div>
 
         <!-- BOTTOM TAB NAVIGATION -->
         <nav class="fixed bottom-0 w-full max-w-[430px] h-20 bg-[#121214]/90 backdrop-blur-md border-t border-zinc-900/80 flex justify-around items-center px-4 z-50">
@@ -176,163 +138,141 @@
         const db = window.supabase.createClient(supabaseUrl, supabaseKey);
 
         let profile = JSON.parse(localStorage.getItem('scout_profile') || '{}');
-        const savedFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-        const savedRadars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
-
-        if (!profile.interests) {
-            profile.interests = 'Cars, Tools, Wood';
+        if (profile.email && !profile.loggedIn) {
+            profile.loggedIn = true;
             localStorage.setItem('scout_profile', JSON.stringify(profile));
         }
 
         if (profile.name) document.getElementById('profileName').innerText = profile.name;
         if (profile.email) document.getElementById('profileEmail').innerText = profile.email;
         if (profile.location) document.getElementById('profileLocation').innerHTML = `<i class="fa-solid fa-location-dot mr-1 text-[#bcf53f]"></i> ${profile.location}`;
-
         if (profile.avatar_url) {
-            const avatarImg = document.getElementById('profileAvatarImg');
-            const avatarIcon = document.getElementById('profileAvatarIcon');
-            avatarImg.src = profile.avatar_url;
-            avatarImg.classList.remove('hidden');
-            avatarIcon.classList.add('hidden');
+            document.getElementById('profileAvatarImg').src = profile.avatar_url;
+            document.getElementById('profileAvatarImg').classList.remove('hidden');
+            document.getElementById('profileAvatarIcon').classList.add('hidden');
         }
 
-        renderInterests();
+        let selectedItemToExtend = null;
+        let currentItemExpiry = null;
 
-        document.getElementById('findsCount').innerText = savedFinds.length;
-        document.getElementById('radarsCount').innerText = savedRadars.length;
-
-        function renderInterests() {
-            const container = document.getElementById('profileInterestsContainer');
-            const topics = (profile.interests || 'Cars, Tools, Wood').split(',').map(t => t.trim()).filter(Boolean);
-            container.innerHTML = '';
-            topics.forEach(topic => {
-                const a = document.createElement('a');
-                a.href = `swipe.html?q=${encodeURIComponent(topic)}`;
-                a.className = "bg-zinc-900 hover:bg-[#bcf53f] hover:text-[#121214] text-[#bcf53f] border border-zinc-800 text-[10px] font-extrabold px-3 py-1 rounded-full uppercase tracking-wider transition shadow-sm cursor-pointer";
-                a.innerText = topic;
-                container.appendChild(a);
-            });
-        }
-
-        window.uploadAvatar = async function(event) {
-            const file = event.target.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async function(e) {
-                const base64Image = e.target.result;
-                profile.avatar_url = base64Image;
-                localStorage.setItem('scout_profile', JSON.stringify(profile));
-
-                const avatarImg = document.getElementById('profileAvatarImg');
-                const avatarIcon = document.getElementById('profileAvatarIcon');
-                avatarImg.src = base64Image;
-                avatarImg.classList.remove('hidden');
-                avatarIcon.classList.add('hidden');
-            };
-            reader.readAsDataURL(file);
-        };
-
-        async function loadUserListings() {
-            const container = document.getElementById('myListingsContainer');
+        async function loadMyBoosts() {
+            const container = document.getElementById('myBoostsContainer');
             if (!profile.email) {
-                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">Log in to view your broadcasts.</div>`;
+                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">Please set up your account email in <a href="setup.html" class="text-[#bcf53f] underline">Edit Account</a>.</div>`;
                 return;
             }
 
             const { data, error } = await db.from('items').select('*').eq('user_email', profile.email);
-
-            if (error) {
-                console.error("Error fetching user listings:", error);
-                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-red-400">Failed to load your listings.</div>`;
+            if (error || !data) {
+                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-red-400">Could not load boosts right now.</div>`;
                 return;
             }
 
             const now = new Date();
-            const ninetyDaysAgo = new Date(now.getTime() - (90 * 24 * 60 * 60 * 1000));
+            const activeBoosts = data.filter(item => item.is_boosted && item.boost_expires_at && new Date(item.boost_expires_at) > now);
 
-            const activeListings = (data || []).filter(item => {
-                if (!item.created_at) return true;
-                return new Date(item.created_at) > ninetyDaysAgo;
-            });
-
-            if (activeListings.length === 0) {
-                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">No active broadcasts found. Listings auto-expire after 90 days.</div>`;
+            if (activeBoosts.length === 0) {
+                container.innerHTML = `<div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 text-center text-xs text-zinc-500">No active boosts. Choose "Boost Post" when sharing a bargain to pin it here!</div>`;
                 return;
             }
 
             container.innerHTML = '';
-            activeListings.forEach(item => {
+            activeBoosts.forEach(item => {
+                const expiryDate = new Date(item.boost_expires_at);
+                const diffTime = expiryDate - now;
+                const daysRemaining = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+
                 const card = document.createElement('div');
-                card.className = "bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between space-x-3";
+                card.className = "bg-[#1e1e22] border border-[#bcf53f]/60 rounded-2xl p-4 flex items-center justify-between space-x-3 shadow-[0_0_15px_rgba(188,245,63,0.1)]";
+                
                 card.innerHTML = `
                     <div class="flex items-center space-x-3 overflow-hidden">
                         <img src="${item.image_url}" class="w-12 h-12 rounded-xl object-cover shrink-0 bg-zinc-900" />
                         <div class="truncate">
                             <span class="text-[#bcf53f] font-black text-sm block">${item.price}</span>
                             <span class="text-xs text-white font-bold block truncate">${item.title}</span>
-                            <span class="text-[10px] text-zinc-400">${item.location}</span>
+                            <span class="text-[10px] text-amber-400 font-bold block"><i class="fa-solid fa-clock mr-1"></i> ${daysRemaining} day${daysRemaining > 1 ? 's' : ''} left</span>
                         </div>
                     </div>
-                    <button onclick="deleteListing('${item.id}')" class="bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 p-3 rounded-xl shrink-0 transition cursor-pointer">
-                        <i class="fa-solid fa-trash-can text-xs"></i>
+                    <button onclick="openExtendModal('${item.id}', '${item.boost_expires_at}')" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black px-4 py-2.5 rounded-xl text-xs uppercase tracking-wider shrink-0 transition cursor-pointer shadow-md">
+                        Renew
                     </button>
                 `;
                 container.appendChild(card);
             });
         }
 
-        window.deleteListing = async function(id) {
-            if (!confirm("Are you sure you want to delete this listing?")) return;
+        window.openExtendModal = function(itemId, currentExpiry) {
+            selectedItemToExtend = itemId;
+            currentItemExpiry = currentExpiry;
+            document.getElementById('extendDaysSlider').value = 1;
+            updateExtendCost(1);
+            document.getElementById('extendBoostModal').classList.remove('hidden');
+        }
 
-            const { error } = await db.from('items').delete().eq('id', id);
-            if (error) {
-                alert("Error deleting listing: " + error.message);
-            } else {
-                alert("Listing deleted successfully.");
-                loadUserListings();
+        window.closeExtendModal = function() {
+            document.getElementById('extendBoostModal').classList.add('hidden');
+            selectedItemToExtend = null;
+            currentItemExpiry = null;
+        }
+
+        window.updateExtendCost = function(days) {
+            document.getElementById('extendDaysLabel').innerText = `${days} Day${days > 1 ? 's' : ''}`;
+            const cost = (days * 0.10).toFixed(2);
+            document.getElementById('extendCostLabel').innerText = `£${cost}`;
+        }
+
+        window.confirmExtendBoost = async function() {
+            if (!selectedItemToExtend) return;
+            const days = parseInt(document.getElementById('extendDaysSlider').value);
+            const cost = (days * 0.10).toFixed(2);
+
+            if (confirm(`🔒 Secure Checkout\n\nConfirm payment of £${cost} for ${days} day${days > 1 ? 's' : ''} boost extension?`)) {
+                let baseDate = new Date(currentItemExpiry) > new Date() ? new Date(currentItemExpiry) : new Date();
+                baseDate.setDate(baseDate.getDate() + days);
+
+                const { error } = await db.from('items').update({
+                    is_boosted: true,
+                    boost_expires_at: baseDate.toISOString()
+                }).eq('id', selectedItemToExtend);
+
+                if (error) {
+                    alert("Could not process boost renewal. Please try again.");
+                } else {
+                    alert("Payment successful! Boost renewed successfully 🚀");
+                    closeExtendModal();
+                    loadMyBoosts();
+                }
             }
         }
 
         window.logoutUser = function() {
             profile.loggedIn = false;
+            profile.email = '';
             localStorage.setItem('scout_profile', JSON.stringify(profile));
             alert("Logged out successfully.");
             window.location.href = 'setup.html';
         }
 
-        // SECURE CACHE CLEAR: Clears cache while protecting monetization quotas
         window.clearLocalStorage = function() {
-            if (confirm("Clear temporary cache and local viewing data? Your account quotas, monthly upload counts, and daily swipe limits remain protected.")) {
+            if (confirm("Clear temporary cache? Your account quotas and active limits remain secure.")) {
                 const preservedKeys = {};
                 for (let i = 0; i < localStorage.length; i++) {
                     const key = localStorage.key(i);
-                    if (key.includes('scout_right_limit') || key.includes('scout_total_swipes') || key.includes('scout_last_swipe_date') || key.includes('scout_upload_count') || key.includes('scout_upload_month') || key.includes('scout_my_uploads')) {
+                    if (key.includes('scout_right_limit') || key.includes('scout_total_swipes') || key.includes('scout_last_swipe_date') || key.includes('scout_upload_count') || key.includes('scout_upload_month') || key.includes('scout_my_uploads') || key.includes('scout_profile')) {
                         preservedKeys[key] = localStorage.getItem(key);
                     }
                 }
-
                 localStorage.clear();
-
                 for (const [key, value] of Object.entries(preservedKeys)) {
                     localStorage.setItem(key, value);
                 }
-
-                alert("Cache cleared successfully. Account paywall quotas are locked and secure.");
+                alert("Cache cleared successfully.");
                 location.reload();
             }
         }
 
-        // DEV HARD RESET: Wipes everything including paywalls for testing
-        window.devHardReset = function() {
-            if (confirm("DEVELOPER RESET: Are you sure you want to completely wipe all limits, swipe counts, and profile cache for testing?")) {
-                localStorage.clear();
-                alert("All local storage wiped clean for testing!");
-                window.location.href = 'setup.html';
-            }
-        }
-
-        loadUserListings();
+        loadMyBoosts();
     </script>
 </body>
 </html>
