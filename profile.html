@@ -138,7 +138,7 @@
                 </button>
                 <button onclick="clearLocalStorage()" class="w-full bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 font-bold uppercase tracking-wider py-3.5 rounded-2xl transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
                     <i class="fa-solid fa-trash-can"></i>
-                    <span>Reset All Local Data & Cache</span>
+                    <span>Clear Cache & Temp Data</span>
                 </button>
             </div>
 
@@ -270,7 +270,7 @@
                             <span class="text-[10px] text-zinc-400">${item.location}</span>
                         </div>
                     </div>
-                    <button onclick="deleteListing('${item.id}')" class="bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 p-3 rounded-xl shrink-0 transition cursor-pointer">
+                    <button onclick="deleteListing('${item.id}')" class="bg-red-500/15 hover:bg-red-500/25 text-red-400 border border-red-500/30 p-3 rounded-xl shrink-0 transition cursor-pointer">
                         <i class="fa-solid fa-trash-can text-xs"></i>
                     </button>
                 `;
@@ -297,9 +297,27 @@
             window.location.href = 'setup.html';
         }
 
+        // SECURE CACHE CLEAR: Preserves paywalls, swipe limits, and account upload counts!
         window.clearLocalStorage = function() {
-            if (confirm("Are you sure you want to clear all saved profile data, finds, and radars?")) {
+            if (confirm("Clear temporary cache and local viewing data? Your account quotas, swipe limits, and active broadcasts remain protected.")) {
+                // Keep monetized/quota keys intact
+                const preservedKeys = {};
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    if (key.includes('scout_right_limit') || key.includes('scout_total_swipes') || key.includes('scout_upload_count') || key.includes('scout_my_uploads')) {
+                        preservedKeys[key] = localStorage.getItem(key);
+                    }
+                }
+
+                // Clear general cache
                 localStorage.clear();
+
+                // Restore protected keys
+                for (const [key, value] of Object.entries(preservedKeys)) {
+                    localStorage.setItem(key, value);
+                }
+
+                alert("Cache cleared successfully. Account paywall quotas are locked and secure.");
                 location.reload();
             }
         }
