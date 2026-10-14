@@ -225,7 +225,8 @@
                 return;
             }
 
-            document.getElementById('cardCounter').innerText = `Right Swipes: ${savedFinds.length} / ${rightSwipeLimit}`;
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            document.getElementById('cardCounter').innerText = `Right Swipes: ${currentFinds.length} / ${rightSwipeLimit}`;
             const item = items[currentIndex];
 
             deckContainer.innerHTML = `
@@ -258,15 +259,16 @@
 
             if (direction === 'right') {
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                
-                // Strict check: If user reached limit, halt and show paywall
-                if (currentFinds.length >= rightSwipeLimit) {
+                const item = items[currentIndex];
+                const alreadyLiked = currentFinds.some(f => f.title === item.title);
+
+                // If not already liked and limit reached, show paywall
+                if (!alreadyLiked && currentFinds.length >= rightSwipeLimit) {
                     document.getElementById('paywallOverlay').classList.remove('hidden');
                     return; 
                 }
 
-                const item = items[currentIndex];
-                if (!currentFinds.some(f => f.title === item.title)) {
+                if (!alreadyLiked) {
                     currentFinds.push(item);
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                     savedFinds = currentFinds;
@@ -312,7 +314,6 @@
         }
 
         window.watchAdForExtraSwipe = function() {
-            // Simulated rewarded ad trigger for mobile web/PWA
             alert("Playing short partner ad...");
             setTimeout(() => {
                 rightSwipeLimit += 1;
