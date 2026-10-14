@@ -260,17 +260,14 @@
             if (!card) return;
 
             if (direction === 'right') {
-                // Check if user reached the limit of right-swipes
                 if (totalRightSwipes >= rightSwipeLimit) {
                     document.getElementById('paywallOverlay').classList.remove('hidden');
                     return; 
                 }
 
-                // Increment total right-swipes count
                 totalRightSwipes++;
                 localStorage.setItem('scout_total_swipes', totalRightSwipes);
 
-                // Save item to basket
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
                 if (!currentFinds.some(f => f.title === item.title)) {
@@ -297,7 +294,6 @@
                 localStorage.setItem('scout_right_limit', rightSwipeLimit);
                 document.getElementById('paywallOverlay').classList.add('hidden'); 
                 
-                // Save current item since they paid
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
                 const item = items[currentIndex];
                 if (!currentFinds.some(f => f.title === item.title)) {
@@ -366,7 +362,7 @@
             let currentX = 0;
 
             card.addEventListener('touchstart', (e) => {
-                startX = e.touches[0://clientX;
+                startX = e.touches[0].clientX;
             }, { passive: true });
 
             card.addEventListener('touchmove', (e) => {
