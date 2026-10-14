@@ -501,34 +501,53 @@
             document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
         }
 
-        // Secure Supabase Edge Function AI Search Integration
+        // Smart Natural Language Parsing Search (Instant & Reliable)
         let currentSearchQuery = '';
         let currentMaxPrice = 1000;
         let currentLocationFilter = '';
 
-        async function handleOpenAISearch(rawInput) {
-            const input = rawInput.trim();
+        function handleOpenAISearch(rawInput) {
+            const input = rawInput.toLowerCase().trim();
             if (!input) return;
 
-            document.getElementById('deckHeaderTitle').innerText = `AI PARSING...`;
+            document.getElementById('deckHeaderTitle').innerText = `SEARCHING...`;
             switchView('swipe');
 
-            try {
-                const { data, error } = await db.functions.invoke('parse-search', {
-                    body: { prompt: input }
-                });
+            currentSearchQuery = '';
+            currentMaxPrice = 1000;
+            currentLocationFilter = '';
 
-                if (error) throw error;
+            // 1. Extract Price (e.g. "under 5", "less than £10", "below 20")
+            const priceMatch = input.match(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?(\d+)/);
+            if (priceMatch) {
+                currentMaxPrice = parseFloat(priceMatch[1]);
+            }
 
-                currentSearchQuery = data.keyword ? data.keyword.toLowerCase() : '';
-                currentMaxPrice = data.max_price !== null ? parseFloat(data.max_price) : 1000;
-                currentLocationFilter = data.location ? data.location.toLowerCase() : '';
+            // 2. Extract Location (e.g. "in crediton", "near exeter")
+            const locMatch = input.match(/(?:in|near|around)\s+([a-z\s]+)(?=\s+under|\s+less|\s+below|\$)/);
+            if (locMatch) {
+                currentLocationFilter = locMatch[1].trim();
+            } else if (input.includes('crediton')) {
+                currentLocationFilter = 'crediton';
+            }
 
-            } catch (err) {
-                console.error("Edge Function Error, falling back to raw text search:", err);
-                currentSearchQuery = input.toLowerCase();
-                currentMaxPrice = 1000;
-                currentLocationFilter = '';
+            // 3. Extract Core Keyword / Item
+            let cleaned = input
+                .replace(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?\d+/g, '')
+                .replace(/(?:in|near|around)\s+[a-z\s]+/g, '')
+                .replace(/(i need a|i want a|looking for|find me|show me|can you find|search for|a|an)/g, '')
+                .trim();
+
+            if (cleaned.includes('car') || cleaned.includes('vehicle') || cleaned.includes('drive') || cleaned.includes('merc') || cleaned.includes('bmw')) {
+                currentSearchQuery = 'car';
+            } else if (cleaned.includes('lamp') || cleaned.includes('lampshade') || cleaned.includes('shade') || cleaned.includes('light')) {
+                currentSearchQuery = 'lampshade';
+            } else if (cleaned.includes('chair') || cleaned.includes('seat') || cleaned.includes('sofa')) {
+                currentSearchQuery = 'chair';
+            } else if (cleaned.includes('vacuum') || cleaned.includes('hoover') || cleaned.includes('cleaner') || cleaned.includes('dyson')) {
+                currentSearchQuery = 'vacuum';
+            } else {
+                currentSearchQuery = cleaned;
             }
 
             loadDeck('search');
@@ -928,7 +947,6 @@
                 return;
             }
 
-            // Automatically format price with pound sign if omitted
             let formattedPrice = rawPrice;
             if (!formattedPrice.startsWith('£') && !formattedPrice.startsWith('€') && !formattedPrice.startsWith('\$')) {
                 formattedPrice = '£' + formattedPrice;
