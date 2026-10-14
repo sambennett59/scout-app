@@ -612,7 +612,8 @@
                 rightSwipeLimit += 1;
                 document.getElementById('paywallOverlay').classList.add('hidden');
                 updateUI();
-                alert("Payment successful! 1 extra swipe unlocked.");
+                alert("Payment successful! Extra swipe unlocked.");
+                completeBlockedRightSwipe();
             }
         }
 
@@ -622,8 +623,31 @@
                 rightSwipeLimit += 1;
                 document.getElementById('paywallOverlay').classList.add('hidden');
                 updateUI();
-                alert("Ad watched! 1 extra swipe unlocked.");
+                alert("Ad watched! Extra swipe unlocked.");
+                completeBlockedRightSwipe();
             }, 1000);
+        }
+
+        function completeBlockedRightSwipe() {
+            const card = document.getElementById('activeSwipeCard');
+            if (!card) return;
+
+            const currentItem = items[currentIndex];
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            
+            if (!currentFinds.some(f => f.title === currentItem.title)) {
+                currentFinds.push({ title: currentItem.title, price: currentItem.price, location: currentItem.location, image_url: currentItem.image_url, external_link: currentItem.external_link });
+                localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+            }
+            
+            totalRightSwipes++;
+            db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
+            updateUI();
+            
+            card.style.transform = 'translateX(400px) rotate(20deg)';
+            card.style.opacity = '0';
+            
+            setTimeout(() => { currentIndex++; renderCard(); }, 250);
         }
 
         function dismissPaywallAndSwipeLeft() {
