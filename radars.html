@@ -89,8 +89,12 @@
         let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
 
         async function requestNotificationAccess() {
-            if ("Notification" in window && Notification.permission !== "granted") {
-                await Notification.requestPermission();
+            try {
+                if ("Notification" in window && Notification.permission !== "granted") {
+                    await Notification.requestPermission();
+                }
+            } catch (e) {
+                console.log("Notification permission note:", e);
             }
         }
         requestNotificationAccess();
@@ -104,7 +108,13 @@
                 radars.push(keyword);
                 localStorage.setItem('scout_radars', JSON.stringify(radars));
                 input.value = '';
-                await checkForNewMatches([keyword]);
+                
+                try {
+                    await checkForNewMatches([keyword]);
+                } catch (e) {
+                    console.log("Background check note:", e);
+                }
+                
                 loadRadars();
             }
         }
@@ -128,10 +138,14 @@
                     if (!notifiedItems.includes(notificationKey)) {
                         notifiedItems.push(notificationKey);
                         if ("Notification" in window && Notification.permission === "granted") {
-                            new Notification(`🚨 Radar Match: ${radar}`, {
-                                body: `New bargain found: ${match.title} for ${match.price}!`,
-                                icon: match.image_url
-                            });
+                            try {
+                                new Notification(`🚨 Radar Match: ${radar}`, {
+                                    body: `New bargain found: ${match.title} for ${match.price}!`,
+                                    icon: match.image_url
+                                });
+                            } catch (err) {
+                                console.log("Notification display note:", err);
+                            }
                         }
                     }
                 });
@@ -153,7 +167,11 @@
             const { data: items } = await db.from('items').select('*');
             const allItems = items || [];
 
-            checkForNewMatches(radars);
+            try {
+                checkForNewMatches(radars);
+            } catch (e) {
+                console.log("Background check note:", e);
+            }
 
             container.innerHTML = '';
             radars.forEach(radar => {
