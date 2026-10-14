@@ -397,7 +397,10 @@
             else document.getElementById('deckHeaderTitle').innerText = `DISCOVER DECK`;
 
             const { data } = await db.from('items').select('*');
-            if (!data || data.length === 0) return;
+            if (!data || data.length === 0) {
+                document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`;
+                return;
+            }
 
             const now = new Date();
             items = data.sort((a, b) => {
@@ -417,12 +420,12 @@
             updateUI();
             const item = items[currentIndex];
             deckContainer.innerHTML = `
-                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl">
-                    <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden">
+                <div id="activeSwipeCard" class="swipe-card absolute inset-0 bg-scout-card border border-zinc-800 rounded-3xl overflow-hidden flex flex-col justify-between shadow-2xl cursor-grab active:cursor-grabbing">
+                    <div class="relative w-full h-[65%] bg-zinc-900 overflow-hidden pointer-events-none">
                         <img src="${item.image_url}" class="w-full h-full object-cover" />
                         <span class="absolute top-4 left-4 bg-scout-dark/85 text-scout-neon border border-zinc-800 text-sm font-black px-4 py-2 rounded-full uppercase z-10">${item.price}</span>
                     </div>
-                    <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark">
+                    <div class="p-5 flex flex-col justify-between h-[35%] bg-gradient-to-t from-scout-card to-scout-dark pointer-events-none">
                         <h2 class="text-lg font-black text-white leading-snug line-clamp-2">${item.title}</h2>
                         <p class="text-sm text-zinc-400"><i class="fa-solid fa-location-dot mr-1 text-scout-neon"></i>${item.location}</p>
                     </div>
@@ -434,37 +437,96 @@
         function swipeAction(direction) {
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
+            
             if (direction === 'right') {
-                if (totalRightSwipes >= rightSwipeLimit) return;
+                if (totalRightSwipes >= rightSwipeLimit) {
+                    document.getElementById('paywallOverlay').classList.remove('hidden');
+                    return;
+                }
+                
                 const currentItem = items[currentIndex];
                 let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-                currentFinds.push({ title: currentItem.title, price: currentItem.price, location: currentItem.location, image_url: currentItem.image_url, external_link: currentItem.external_link });
-                localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+                
+                if (!currentFinds.some(f => f.title === currentItem.title)) {
+                    currentFinds.push({ title: currentItem.title, price: currentItem.price, location: currentItem.location, image_url: currentItem.image_url, external_link: currentItem.external_link });
+                    localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
+                }
+                
                 totalRightSwipes++;
+                db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
                 updateUI();
+                
                 card.style.transform = 'translateX(400px) rotate(20deg)';
             } else {
                 card.style.transform = 'translateX(-400px) rotate(-20deg)';
             }
             card.style.opacity = '0';
+            
             setTimeout(() => { currentIndex++; renderCard(); }, 250);
+        }
+
+        function unlockMoreRightSwipe() {
+            if (confirm("Confirm 49p payment for 1 extra daily right-swipe slot?")) {
+                rightSwipeLimit += 1;
+                document.getElementById('paywallOverlay').classList.add('hidden');
+                swipeAction('right');
+            }
+        }
+
+        function watchAdForExtraSwipe() {
+            alert("Playing short partner ad...");
+            setTimeout(() => {
+                rightSwipeLimit += 1;
+                document.getElementById('paywallOverlay').classList.add('hidden');
+                swipeAction('right');
+            }, 1000);
+        }
+
+        function dismissPaywallAndSwipeLeft() {
+            document.getElementById('paywallOverlay').classList.add('hidden');
+            swipeAction('left');
         }
 
         function initTouchGestures() {
             const card = document.getElementById('activeSwipeCard');
             if (!card) return;
-            let startX = 0; let currentX = 0;
-            card.addEventListener('touchstart', e => startX = e.touches[0].clientX, { passive: true });
-            card.addEventListener('touchmove', e => {
-                currentX = e.touches[0].clientX;
+            
+            let startX = 0; 
+            let currentX = 0;
+            let isDragging = false;
+
+            const startDrag = (x) => {
+                startX = x;
+                isDragging = true;
+                card.style.transition = 'none';
+            };
+
+            const drag = (x) => {
+                if (!isDragging) return;
+                currentX = x;
                 const diff = currentX - startX;
                 card.style.transform = `translateX(${diff}px) rotate(${diff * 0.05}deg)`;
-            }, { passive: true });
-            card.addEventListener('touchend', () => {
+            };
+
+            const endDrag = () => {
+                if (!isDragging) return;
+                isDragging = false;
+                card.style.transition = 'transform 0.25s ease, opacity 0.25s ease';
                 const diff = currentX - startX;
-                if (Math.abs(diff) > 100) swipeAction(diff > 0 ? 'right' : 'left');
-                else card.style.transform = 'translateX(0) rotate(0)';
-            });
+                if (Math.abs(diff) > 100) {
+                    swipeAction(diff > 0 ? 'right' : 'left');
+                } else {
+                    card.style.transform = 'translateX(0) rotate(0)';
+                }
+            };
+
+            card.addEventListener('mousedown', e => startDrag(e.clientX));
+            window.addEventListener('mousemove', e => drag(e.clientX));
+            window.addEventListener('mouseup', endDrag);
+
+            card.addEventListener('touchstart', e => startDrag(e.touches[0].clientX), { passive: true });
+            card.addEventListener('touchmove', e => drag(e.touches[0].clientX), { passive: true });
+            card.addEventListener('touchend', endDrag);
         }
 
         // --- FINDS LOGIC ---
@@ -487,13 +549,13 @@
                                 </div>
                             </div>
                             <div class="flex items-center space-x-2 shrink-0">
-                                <button onclick="shareItem('${item.title.replace(/'/g, "\\'")}', '${targetUrl}', '${item.price}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2.5 rounded-xl transition" title="Share Link">
+                                <button onclick="shareItem('${item.title.replace(/'/g, "\\'")}', '${targetUrl}', '${item.price}')" class="bg-zinc-800 hover:bg-zinc-700 text-zinc-300 p-2.5 rounded-xl transition cursor-pointer" title="Share Link">
                                     <i class="fa-solid fa-share-nodes text-xs"></i>
                                 </button>
                                 <a href="${targetUrl}" target="_blank" class="bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black text-[10px] uppercase tracking-wider px-3.5 py-2.5 rounded-xl transition shadow-md">
                                     Buy <i class="fa-solid fa-arrow-right ml-0.5"></i>
                                 </a>
-                                <button onclick="removeFind(${index})" class="text-zinc-600 hover:text-red-400 p-2 transition">
+                                <button onclick="removeFind(${index})" class="text-zinc-600 hover:text-red-400 p-2 transition cursor-pointer">
                                     <i class="fa-solid fa-xmark text-xs"></i>
                                 </button>
                             </div>
@@ -550,7 +612,7 @@
                 container.innerHTML += `
                     <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex justify-between items-center">
                         <span class="font-black text-sm text-white uppercase tracking-wider">${radar}</span>
-                        <button onclick="deleteRadar('${radar}')" class="text-red-400"><i class="fa-solid fa-trash-can"></i></button>
+                        <button onclick="deleteRadar('${radar}')" class="text-red-400 cursor-pointer"><i class="fa-solid fa-trash-can"></i></button>
                     </div>`;
             });
         }
