@@ -347,42 +347,68 @@
             try {
                 squarePayments = window.Square.payments('sandbox-sq0idb-g8uFk_5JHE7XiPzQiNFzKg', 'LVV21APXPWPGF');
                 
+                // 1. Standard Card Setup
                 squareCard = await squarePayments.card();
                 await squareCard.attach('#square-card-container');
 
+                // 2. Setup Payment Request
                 const paymentRequest = squarePayments.paymentRequest({
                     countryCode: 'GB',
                     currencyCode: 'GBP',
                     total: { amount: '5.00', label: '50 Scout Credits', pending: false }
                 });
 
+                // 3. Apple Pay Setup
                 try {
                     const applePay = await squarePayments.applePay(paymentRequest);
-                    applePay.addEventListener('nonceGenerated', async (event) => {
-                        if (event.detail.status === 'OK') {
-                            await executeTokenPayment(event.detail.token);
-                        } else {
-                            alert("Apple Pay tokenization failed.");
+                    const appleButton = document.getElementById('apple-pay-button');
+                    await applePay.attach('#apple-pay-button');
+                    appleButton.style.display = 'block';
+                    document.getElementById('wallet-divider').style.display = 'block';
+
+                    appleButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
+                        try {
+                            const result = await applePay.tokenize();
+                            if (result.status === 'OK') {
+                                await executeTokenPayment(result.token);
+                            } else {
+                                alert("Apple Pay failed: " + (result.errors?.[0]?.message || 'Unknown error'));
+                            }
+                        } catch (err) {
+                            console.error("Apple Pay error", err);
                         }
                     });
-                    await applePay.attach('#apple-pay-button');
-                    document.getElementById('apple-pay-button').style.display = 'block';
-                    document.getElementById('wallet-divider').style.display = 'block';
-                } catch (e) {}
+                } catch (e) {
+                    console.log("Apple Pay not available", e);
+                }
 
+                // 4. Google Pay Setup
                 try {
                     const googlePay = await squarePayments.googlePay(paymentRequest);
-                    googlePay.addEventListener('nonceGenerated', async (event) => {
-                        if (event.detail.status === 'OK') {
-                            await executeTokenPayment(event.detail.token);
-                        } else {
-                            alert("Google Pay tokenization failed.");
+                    const googleButton = document.getElementById('google-pay-button');
+                    await googlePay.attach('#google-pay-button');
+                    googleButton.style.display = 'block';
+                    document.getElementById('wallet-divider').style.display = 'block';
+
+                    googleButton.addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
+                        try {
+                            const result = await googlePay.tokenize();
+                            if (result.status === 'OK') {
+                                await executeTokenPayment(result.token);
+                            } else {
+                                alert("Google Pay failed: " + (result.errors?.[0]?.message || 'Unknown error'));
+                            }
+                        } catch (err) {
+                            console.error("Google Pay error", err);
                         }
                     });
-                    await googlePay.attach('#google-pay-button');
-                    document.getElementById('google-pay-button').style.display = 'block';
-                    document.getElementById('wallet-divider').style.display = 'block';
-                } catch (e) {}
+                } catch (e) {
+                    console.log("Google Pay not available", e);
+                }
 
             } catch (e) {
                 console.error("Square initialization failed", e);
