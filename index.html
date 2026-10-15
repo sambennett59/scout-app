@@ -415,38 +415,22 @@
             }
         }
 
-        // ==========================================
-        // THE FIX: NATIVE FETCH BYPASSING SDK
-        // ==========================================
         async function executeTokenPayment(token) {
             if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
             
             try {
-                const { data: { session } } = await db.auth.getSession();
-                if (!session) throw new Error("No active session found. Please sign in again.");
-
-                // Using direct fetch to bypass the fragile db.functions.invoke wrapper
-                const response = await fetch(`${supabaseUrl}/functions/v1/process-square`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`
-                    },
-                    body: JSON.stringify({ token: token, amount: 500, credits: 50 })
+                const { data, error } = await db.functions.invoke('process-square', {
+                    body: { token: token, amount: 500, credits: 50 }
                 });
                 
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Server rejected the payment processing request.');
-                }
+                if (error) throw error;
+                if (data && data.error) throw new Error(data.error);
                 
                 alert("Payment successful! 50 Credits added to your wallet.");
                 await fetchWalletBalance();
                 switchView('profile');
             } catch (err) {
                 alert("Payment processing failed on server: " + (err.message || 'Unknown error'));
-                console.error("Fetch Error:", err);
             }
         }
 
