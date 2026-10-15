@@ -358,6 +358,13 @@
 
                 try {
                     const applePay = await squarePayments.applePay(paymentRequest);
+                    applePay.addEventListener('nonceGenerated', async (event) => {
+                        if (event.detail.status === 'OK') {
+                            await executeTokenPayment(event.detail.token);
+                        } else {
+                            alert("Apple Pay tokenization failed.");
+                        }
+                    });
                     await applePay.attach('#apple-pay-button');
                     document.getElementById('apple-pay-button').style.display = 'block';
                     document.getElementById('wallet-divider').style.display = 'block';
@@ -365,20 +372,13 @@
 
                 try {
                     const googlePay = await squarePayments.googlePay(paymentRequest);
-                    
-                    document.getElementById('google-pay-button').addEventListener('click', async (event) => {
-                        event.preventDefault();
-                        if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
-                        try {
-                            const result = await googlePay.tokenize();
-                            if (result.status === 'OK') {
-                                await executeTokenPayment(result.token);
-                            }
-                        } catch (err) {
-                            console.error("Google Pay tokenization failed", err);
+                    googlePay.addEventListener('nonceGenerated', async (event) => {
+                        if (event.detail.status === 'OK') {
+                            await executeTokenPayment(event.detail.token);
+                        } else {
+                            alert("Google Pay tokenization failed.");
                         }
                     });
-
                     await googlePay.attach('#google-pay-button');
                     document.getElementById('google-pay-button').style.display = 'block';
                     document.getElementById('wallet-divider').style.display = 'block';
@@ -390,15 +390,21 @@
         }
 
         async function executeTokenPayment(token) {
-            const { data, error } = await db.functions.invoke('process-square', {
-                body: { token: token, amount: 500, credits: 50 }
-            });
+            if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
             
-            if (error) throw error;
-            
-            alert("Payment successful! 50 Credits added to your wallet.");
-            await fetchWalletBalance();
-            switchView('profile');
+            try {
+                const { data, error } = await db.functions.invoke('process-square', {
+                    body: { token: token, amount: 500, credits: 50 }
+                });
+                
+                if (error) throw error;
+                
+                alert("Payment successful! 50 Credits added to your wallet.");
+                await fetchWalletBalance();
+                switchView('profile');
+            } catch (err) {
+                alert("Payment processing failed on server: " + (err.message || 'Unknown error'));
+            }
         }
 
         async function processCardTopUp() {
@@ -430,18 +436,18 @@
                 userEmail = currentUser.email;
                 await fetchWalletBalance();
                 await syncSwipeQuotas();
+                await updateMonthlyListingCount();
             } else {
                 currentUser = null;
                 updateUI();
             }
             initSquare();
-            updateMonthlyListingCount();
         }
 
         async function fetchWalletBalance() {
             if(!currentUser) return;
             try {
-                const { data } = await db.from('profiles').select('scout_credits').eq('email', userEmail).single();
+                const { data } = await db.from('profiles').select('scout_credits').eq('email', userEmail).maybeSingle();
                 walletCredits = data ? (data.scout_credits || 0) : 0;
                 const displayEl = document.getElementById('walletBalanceDisplay');
                 if (displayEl) displayEl.innerText = walletCredits;
@@ -477,14 +483,9 @@
             if (viewName === 'profile') loadProfileUI();
         }
 
-        async function updateMonthlyListingCount() {
-            const storageKey = `scout_uploads_${userEmail}_${new Date().toISOString().slice(0, 7)}`;
-            let count = parseInt(localStorage.getItem(storageKey) || '0');
-            document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${count}/20`;
-        }
-
         let items = []; let currentIndex = 0; let rightSwipeLimit = 5; let totalRightSwipes = 0;
         const todayStr = new Date().toISOString().split('T')[0];
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
 
         async function syncSwipeQuotas() {
             try {
@@ -496,9 +497,20 @@
                     } else {
                         totalRightSwipes = data.right_swipes || 0;
                     }
+                } else {
+                    await db.from('profiles').insert([{ email: userEmail, right_swipes: 0, swipe_date: todayStr, scout_credits: 0 }]);
                 }
             } catch (e) { console.error(e); }
             updateUI();
+        }
+
+        async function updateMonthlyListingCount() {
+            if (!currentUser) return;
+            try {
+                let { count } = await db.from('items').select('*', { count: 'exact', head: true }).eq('user_email', userEmail).gte('created_at', currentMonthStr + '-01');
+                let totalListings = count || 0;
+                document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${totalListings}/20`;
+            } catch (e) { console.error(e); }
         }
 
         function updateUI() {
@@ -544,7 +556,7 @@
                 if (numericPrice > effectiveMaxPrice) return false;
                 if (mode === 'search') {
                     const tLower = item.title.toLowerCase(); const lLower = item.location.toLowerCase();
-                    return (!currentSearchQuery || tLower.includes(currentSearchQuery) || lLower.includes(currentLocationFilter)) && (!currentLocationFilter || lLower.includes(currentLocationFilter));
+                    return (!currentSearchQuery || tLower.includes(currentSearchQuery) || lLower.includes(currentSearchQuery)) && (!currentLocationFilter || lLower.includes(currentLocationFilter));
                 } return true;
             });
 
@@ -723,8 +735,8 @@
             const title = titleEl.value.trim(); let rawPrice = priceEl.value.trim(); const location = locationEl.value ? locationEl.value.trim() : ""; const external_link = linkEl.value.trim();
             if (!title || !rawPrice || !location || !external_link) { alert("Please fill in the title, price, location, and link."); return; }
 
-            const storageKey = `scout_uploads_${userEmail}_${new Date().toISOString().slice(0, 7)}`;
-            let currentCount = parseInt(localStorage.getItem(storageKey) || '0');
+            let { count } = await db.from('items').select('*', { count: 'exact', head: true }).eq('user_email', userEmail).gte('created_at', currentMonthStr + '-01');
+            let currentCount = count || 0;
 
             if (currentCount >= 20) {
                 if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in to use credits for extra listings."); switchView('setup'); return; }
@@ -762,9 +774,9 @@
             const { error } = await db.from('items').insert([{ title: title, price: formattedPrice, location: location, image_url: imageUrl, external_link: external_link, is_boosted: isBoostedActive, user_email: (currentUser?.email || 'anonymous') }]);
             if (error) { alert("Error launching listing: " + error.message); } 
             else {
-                localStorage.setItem(storageKey, (currentCount + 1).toString());
                 titleEl.value = ''; priceEl.value = ''; locationEl.value = ''; linkEl.value = ''; if(fileInput) fileInput.value = ''; setBoostMode(false);
                 alert("Listing successfully launched to the Swipe Deck!"); switchView('discover');
+                updateMonthlyListingCount();
             }
         }
 
