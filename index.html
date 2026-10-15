@@ -119,17 +119,16 @@
                 <div id="ugcMenuModal" class="absolute inset-0 bg-scout-dark/95 backdrop-blur-md z-[150] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                     <div class="w-14 h-14 bg-red-500/10 border border-red-500/30 text-red-400 rounded-2xl flex items-center justify-center text-2xl"><i class="fa-solid fa-triangle-exclamation"></i></div>
                     <h3 class="text-lg font-black text-white">Manage Listing</h3>
-                    <button onclick="reportCurrentListing()" class="w-full bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition cursor-pointer"><i class="fa-solid fa-flag mr-2 text-red-400"></i> Report</button>
+                    <button onclick="reportCurrentListing()" class="w-full bg-zinc-800 text-white font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition cursor-pointer"><i class="fa-solid fa-flag mr-2 text-red-400"></i> Report Listing</button>
                     <button onclick="blockCurrentSeller()" class="w-full bg-zinc-800 text-red-400 font-bold text-xs uppercase tracking-wider py-3.5 rounded-xl transition cursor-pointer"><i class="fa-solid fa-ban mr-2"></i> Block Seller</button>
                     <button onclick="document.getElementById('ugcMenuModal').classList.add('hidden')" class="text-xs text-zinc-400 underline pt-2 cursor-pointer">Cancel</button>
                 </div>
 
-                <!-- PAYWALL OVERLAY -->
                 <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/98 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                     <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg"><i class="fa-solid fa-heart-circle-bolt"></i></div>
                     <div class="space-y-1">
                         <h2 class="text-xl font-black text-white">Swipe Limit Reached</h2>
-                        <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe for <strong class="text-scout-neon">5 Credits</strong> (50p value).</p>
+                        <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe for <strong class="text-scout-neon">5 Credits</strong> from your wallet.</p>
                     </div>
                     <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
                         <span>Unlock Swipe (5 Credits)</span><i class="fa-solid fa-unlock"></i>
@@ -218,7 +217,7 @@
             </main>
         </div>
 
-        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT (INCLUDING APPLE PAY & GOOGLE PAY) -->
+        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT (APPLE PAY, GOOGLE PAY & CARDS) -->
         <div id="view-wallet" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-2">
                 <button onclick="switchView('profile')" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
@@ -232,12 +231,10 @@
                         <p class="text-xs text-zinc-400">Add 50 Credits to your wallet (10p per credit) to unlock extra right-swipes (5 credits each) or bypass listing limits.</p>
                     </div>
                     
-                    <!-- SQUARE DIGITAL WALLET BUTTONS (APPLE PAY / GOOGLE PAY) -->
                     <div id="apple-pay-button" style="display: none;" class="mb-3"></div>
                     <div id="google-pay-button" style="display: none;" class="mb-3"></div>
                     <div id="wallet-divider" class="text-center text-[10px] text-zinc-500 font-bold uppercase tracking-wider my-2" style="display: none;">- OR PAY WITH CARD -</div>
 
-                    <!-- SQUARE CARD CHECKOUT FORM -->
                     <form id="payment-form" class="space-y-4">
                         <div id="square-card-container" class="sq-card-wrapper min-h-[80px]"></div>
                         <button type="button" id="squarePayBtn" onclick="processCardTopUp()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50">
@@ -342,9 +339,6 @@
             return temp.innerHTML;
         }
 
-        // ==========================================
-        // SQUARE & DIGITAL WALLETS INITIALIZATION
-        // ==========================================
         let squarePayments;
         let squareCard;
 
@@ -353,11 +347,9 @@
             try {
                 squarePayments = window.Square.payments('sandbox-sq0idb-g8uFk_5JHE7XiPzQiNFzKg', 'LVV21APXPWPGF');
                 
-                // Attach Card Form
                 squareCard = await squarePayments.card();
                 await squareCard.attach('#square-card-container');
 
-                // Initialize Apple Pay & Google Pay if supported by device
                 const paymentRequest = squarePayments.paymentRequest({
                     countryCode: 'GB',
                     currencyCode: 'GBP',
@@ -369,14 +361,14 @@
                     await applePay.attach('#apple-pay-button');
                     document.getElementById('apple-pay-button').style.display = 'block';
                     document.getElementById('wallet-divider').style.display = 'block';
-                } catch (e) { /* Apple Pay not supported on this browser/device */ }
+                } catch (e) {}
 
                 try {
                     const googlePay = await squarePayments.googlePay(paymentRequest);
                     await googlePay.attach('#google-pay-button');
                     document.getElementById('google-pay-button').style.display = 'block';
                     document.getElementById('wallet-divider').style.display = 'block';
-                } catch (e) { /* Google Pay not supported on this browser/device */ }
+                } catch (e) {}
 
             } catch (e) {
                 console.error("Square initialization failed", e);
@@ -417,7 +409,6 @@
             btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`;
         }
 
-        // PERMANENT SERVER-SIDE QUOTA SYNC ON RELOAD
         async function initAuth() {
             const { data: { session } } = await db.auth.getSession();
             if (session && session.user) {
@@ -481,7 +472,6 @@
         let items = []; let currentIndex = 0; let rightSwipeLimit = 5; let totalRightSwipes = 0;
         const todayStr = new Date().toISOString().split('T')[0];
 
-        // FIXED: Syncs strictly with database records, preventing app-reload bypasses
         async function syncSwipeQuotas() {
             try {
                 let { data } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
@@ -588,7 +578,7 @@
             if (!currentUser) { alert("Please sign in to unlock features."); switchView('setup'); return; }
             const cost = 5; 
             
-            if (confirm(`Deduct ${cost} Credits (50p value) from your wallet to unlock 1 extra right-swipe slot?`)) {
+            if (confirm(`Deduct ${cost} Credits from your wallet to unlock 1 extra right-swipe slot?`)) {
                 const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: cost });
                 
                 if (error || !hasFunds) {
@@ -619,6 +609,23 @@
         }
 
         function dismissPaywallAndSwipeLeft() { document.getElementById('paywallOverlay').classList.add('hidden'); swipeAction('left'); }
+
+        function reportCurrentListing() {
+            document.getElementById('ugcMenuModal').classList.add('hidden');
+            alert("Listing reported successfully. Thank you for keeping Scout safe.");
+            swipeAction('left');
+        }
+
+        function blockCurrentSeller() {
+            document.getElementById('ugcMenuModal').classList.add('hidden');
+            const currentItem = items[currentIndex];
+            if (currentItem && currentItem.user_email) {
+                blockedSellers.push(currentItem.user_email);
+                localStorage.setItem('scout_blocked', JSON.stringify(blockedSellers));
+            }
+            alert("Seller blocked.");
+            swipeAction('left');
+        }
 
         function initTouchGestures() {
             const card = document.getElementById('activeSwipeCard'); if (!card) return;
@@ -658,6 +665,45 @@
             });
         }
 
+        let locationTimer;
+        async function handleLocationInput(query) {
+            const box = document.getElementById('locationSuggestions');
+            if (!query || query.length < 2) { box.classList.add('hidden'); return; }
+            clearTimeout(locationTimer);
+            locationTimer = setTimeout(async () => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}, UK`);
+                    const results = await res.json();
+                    box.innerHTML = '';
+                    if (results.length > 0) {
+                        results.slice(0, 5).forEach(r => {
+                            const div = document.createElement('div');
+                            div.className = "p-3 hover:bg-zinc-800 text-xs text-zinc-200 cursor-pointer border-b border-zinc-800/50 truncate";
+                            div.innerText = r.display_name;
+                            div.onclick = () => {
+                                document.getElementById('itemLocation').value = r.display_name.split(',')[0];
+                                box.classList.add('hidden');
+                            };
+                            box.appendChild(div);
+                        });
+                        box.classList.remove('hidden');
+                    } else { box.classList.add('hidden'); }
+                } catch(e) { box.classList.add('hidden'); }
+            }, 300);
+        }
+
+        function fetchUserLocation() {
+            if (!navigator.geolocation) { alert("Geolocation is not supported by your browser"); return; }
+            navigator.geolocation.getCurrentPosition(async (pos) => {
+                try {
+                    const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${pos.coords.latitude}&lon=${pos.coords.longitude}`);
+                    const data = await res.json();
+                    const town = data.address.town || data.address.city || data.address.village || data.address.county || "Crediton";
+                    document.getElementById('itemLocation').value = town;
+                } catch(e) { document.getElementById('itemLocation').value = "Crediton"; }
+            }, () => { alert("Unable to retrieve your location"); });
+        }
+
         async function executeUpload() {
             const titleEl = document.getElementById('itemTitle'); const priceEl = document.getElementById('itemPrice'); const locationEl = document.getElementById('itemLocation'); const linkEl = document.getElementById('itemLink'); const fileInput = document.getElementById('itemImageFile');
             const title = titleEl.value.trim(); let rawPrice = priceEl.value.trim(); const location = locationEl.value ? locationEl.value.trim() : ""; const external_link = linkEl.value.trim();
@@ -670,7 +716,7 @@
                 if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in to use credits for extra listings."); switchView('setup'); return; }
                 const overageCost = 10; 
                 
-                const confirmed = confirm(`Monthly Free Limit Reached (20/20).\n\nWould you like to spend ${overageCost} Credits (£1.00) from your wallet to post this extra listing?`);
+                const confirmed = confirm(`Monthly Free Limit Reached (20/20).\n\nWould you like to spend ${overageCost} Credits from your wallet to post this extra listing?`);
                 if (!confirmed) return;
 
                 const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: overageCost });
@@ -708,6 +754,73 @@
             }
         }
 
+        function loadFinds() {
+            const container = document.getElementById('savedFindsContainer');
+            const finds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            if (finds.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-zinc-500 text-sm">No saved finds yet.<br>Swipe right on items in the deck to save them here!</div>`;
+                return;
+            }
+            container.innerHTML = finds.map((item, idx) => `
+                <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between shadow-md">
+                    <div class="flex items-center space-x-3 overflow-hidden">
+                        <img src="${sanitizeHTML(item.image_url)}" class="w-14 h-14 rounded-xl object-cover shrink-0" />
+                        <div class="truncate">
+                            <h4 class="text-sm font-bold text-white truncate">${sanitizeHTML(item.title)}</h4>
+                            <span class="text-xs font-black text-scout-neon">${sanitizeHTML(item.price)}</span>
+                        </div>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <a href="${sanitizeHTML(item.external_link)}" target="_blank" class="bg-scout-neon text-scout-dark text-xs font-bold px-3 py-2 rounded-xl">View</a>
+                        <button onclick="removeFind(${idx})" class="text-zinc-500 hover:text-red-400 p-2"><i class="fa-solid fa-trash"></i></button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function removeFind(index) {
+            let finds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            finds.splice(index, 1);
+            localStorage.setItem('scout_liked_items', JSON.stringify(finds));
+            loadFinds();
+            updateUI();
+        }
+
+        function loadRadars() {
+            const container = document.getElementById('radarsListContainer');
+            const radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
+            if (radars.length === 0) {
+                container.innerHTML = `<div class="text-center py-6 text-zinc-500 text-xs">No active keywords tracked. Add one above to get alerts!</div>`;
+                return;
+            }
+            container.innerHTML = radars.map((radar, idx) => `
+                <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex justify-between items-center shadow-md">
+                    <span class="text-sm font-bold text-white"><i class="fa-solid fa-bullseye text-scout-neon mr-2"></i>${sanitizeHTML(radar)}</span>
+                    <button onclick="removeRadar(${idx})" class="text-zinc-500 hover:text-red-400 text-xs font-bold"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+            `).join('');
+        }
+
+        function addRadar() {
+            const input = document.getElementById('radarKeywordInput');
+            const val = input.value.trim();
+            if (!val) return;
+            let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
+            if (!radars.includes(val)) {
+                radars.push(val);
+                localStorage.setItem('scout_radars', JSON.stringify(radars));
+            }
+            input.value = '';
+            loadRadars();
+        }
+
+        function removeRadar(index) {
+            let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
+            radars.splice(index, 1);
+            localStorage.setItem('scout_radars', JSON.stringify(radars));
+            loadRadars();
+        }
+
         async function loadProfileUI() {
             if (currentUser) {
                 document.getElementById('profileName').innerText = currentUser.email.split('@')[0];
@@ -718,10 +831,6 @@
                 document.getElementById('profileEmail').innerHTML = `<button onclick="switchView('setup')" class="text-[#bcf53f] underline">Sign in securely here</button>`;
             }
         }
-        
-        function loadFinds() {}
-        function loadRadars() {}
-        function addRadar() {}
         
         initAuth();
     </script>
