@@ -43,7 +43,7 @@
             <div class="px-6 mb-5">
                 <div class="flex bg-scout-card rounded-2xl p-4 items-center focus-within:ring-1 focus-within:ring-scout-neon transition shadow-md">
                     <i class="fa-solid fa-wand-magic-sparkles text-scout-neon text-lg mr-3"></i>
-                    <input type="text" id="aiSearchInput" placeholder="e.g. 'clothes, t-shirts under £10'" class="w-full bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none" onkeypress="if(event.key === 'Enter') { handleOpenAISearch(this.value); }" />
+                    <input type="text" id="aiSearchInput" placeholder="e.g. 'tools, clothes under £20 in crediton'" class="w-full bg-transparent text-base text-white placeholder-zinc-500 focus:outline-none" onkeypress="if(event.key === 'Enter') { handleOpenAISearch(this.value); }" />
                 </div>
             </div>
 
@@ -601,15 +601,13 @@
             switchView('swipe');
         }
 
-        // REAL OPENAI SEARCH VIA SUPABASE EDGE FUNCTION WITH SEMANTIC EXPANSION
+        // CALLS YOUR SUPABASE EDGE FUNCTION TO USE OPENAI API & CREDITS DIRECTLY
         async function handleOpenAISearch(rawInput) {
             const input = rawInput.trim();
             if (!input) return;
 
-            document.getElementById('deckHeaderTitle').innerText = `AI SEARCHING...`;
+            document.getElementById('deckHeaderTitle').innerText = `OPENAI SEARCHING...`;
             switchView('swipe');
-
-            let parsed = null;
 
             try {
                 const { data, error } = await db.functions.invoke('ai-search', {
@@ -617,33 +615,20 @@
                 });
 
                 if (error) throw error;
-                parsed = typeof data === 'string' ? JSON.parse(data) : data;
+
+                const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+
+                currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase();
+                currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000;
+                currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
+
+                loadDeck('search');
             } catch (e) {
-                console.warn("Edge function network/CORS block encountered, using intelligent fallback expansion:", e);
-                
-                const lower = input.toLowerCase();
-                currentMaxPrice = 1000;
-                currentLocationFilter = '';
-                
-                const priceMatch = lower.match(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?(\d+)/);
-                if (priceMatch) currentMaxPrice = parseFloat(priceMatch[1]);
-
-                if (lower.includes('crediton')) currentLocationFilter = 'crediton';
-                else if (lower.includes('exeter')) currentLocationFilter = 'exeter';
-
-                let coreQuery = lower
-                    .replace(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?\d+/g, '')
-                    .replace(/(?:in|near|around)\s+[a-z\s]+/g, '')
-                    .trim();
-
-                parsed = { query: coreQuery, max_price: currentMaxPrice, location: currentLocationFilter };
+                console.error("OpenAI Edge Function Error:", e);
+                alert("OpenAI search failed or credits unavailable. Check console/API key settings.");
+                currentSearchQuery = input.toLowerCase();
+                loadDeck('search');
             }
-
-            currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase();
-            currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000;
-            currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
-
-            loadDeck('search');
         }
 
         async function loadDeck(mode = 'standard') {
@@ -681,18 +666,10 @@
                 if (mode === 'search') {
                     const titleLower = item.title.toLowerCase();
                     const locLower = item.location.toLowerCase();
-                    const q = currentSearchQuery;
-
-                    // Semantic expansions so category terms like "clothes" or "vehicle" match specific items like "t-shirts" or "bmw"
-                    const matchesCategory = 
-                        (q.includes('clothes') && (titleLower.includes('shirt') || titleLower.includes('t-shirt') || titleLower.includes('top') || titleLower.includes('jean') || titleLower.includes('jacket') || titleLower.includes('wear'))) ||
-                        (q.includes('car') && (titleLower.includes('bmw') || titleLower.includes('mercedes') || titleLower.includes('ford') || titleLower.includes('audi') || titleLower.includes('s-max') || titleLower.includes('vehicle'))) ||
-                        (q.includes('lamp') && (titleLower.includes('lamp') || titleLower.includes('shade') || titleLower.includes('light')));
-
-                    const matchesQuery = !q || 
-                        titleLower.includes(q) || 
-                        locLower.includes(q) ||
-                        matchesCategory;
+                    
+                    const matchesQuery = !currentSearchQuery || 
+                        titleLower.includes(currentSearchQuery) || 
+                        locLower.includes(currentSearchQuery);
 
                     const matchesLoc = !currentLocationFilter || locLower.includes(currentLocationFilter);
 
