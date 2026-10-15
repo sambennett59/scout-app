@@ -615,16 +615,31 @@
 
                 if (error) throw error;
 
-                currentSearchQuery = data.query ? data.query.toLowerCase() : '';
-                currentMaxPrice = data.max_price ? parseFloat(data.max_price) : 1000;
-                currentLocationFilter = data.location ? data.location.toLowerCase() : '';
+                const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+
+                currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase();
+                currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000;
+                currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
 
                 loadDeck('search');
             } catch (e) {
-                console.error("Edge Function AI Search Error, falling back to keyword search:", e);
-                currentSearchQuery = input.toLowerCase();
+                console.warn("Edge function call failed, falling back to local search parser:", e);
+                
+                const lower = input.toLowerCase();
                 currentMaxPrice = 1000;
                 currentLocationFilter = '';
+                
+                const priceMatch = lower.match(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?(\d+)/);
+                if (priceMatch) currentMaxPrice = parseFloat(priceMatch[1]);
+
+                if (lower.includes('crediton')) currentLocationFilter = 'crediton';
+                else if (lower.includes('exeter')) currentLocationFilter = 'exeter';
+
+                currentSearchQuery = lower
+                    .replace(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?\d+/g, '')
+                    .replace(/(?:in|near|around)\s+[a-z\s]+/g, '')
+                    .trim();
+
                 loadDeck('search');
             }
         }
@@ -1118,7 +1133,6 @@
             } else {
                 localStorage.setItem(storageKey, (currentCount + 1).toString());
 
-                // Reset all form inputs completely back to placeholder state
                 titleEl.value = '';
                 priceEl.value = '';
                 locationEl.value = '';
