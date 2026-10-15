@@ -477,11 +477,15 @@
             try {
                 const { data, error } = await db
                     .from('items')
-                    .select('id, created_at')
-                    .eq('user_email', userEmail);
+                    .select('id, created_at, user_email');
                 
                 if (!error && data) {
-                    const currentMonthItems = data.filter(item => item.created_at && item.created_at.startsWith(currentMonthYear));
+                    const currentMonthItems = data.filter(item => {
+                        const matchesUser = item.user_email === userEmail || item.user_email === 'developer@scout.local' || item.user_email === currentUser?.email;
+                        const matchesMonth = item.created_at && item.created_at.startsWith(currentMonthYear);
+                        return matchesUser && matchesMonth;
+                    });
+                    
                     if (currentMonthItems.length > count) {
                         count = currentMonthItems.length;
                         localStorage.setItem(storageKey, count.toString());
@@ -1081,6 +1085,16 @@
                 return;
             }
 
+            // Enforce 20 free monthly listing limit paywall
+            const currentMonthYear = new Date().toISOString().slice(0, 7);
+            const storageKey = `scout_uploads_${userEmail}_${currentMonthYear}`;
+            let currentCount = parseInt(localStorage.getItem(storageKey) || '0');
+
+            if (currentCount >= 20) {
+                alert("Monthly Listing Limit Reached (20/20).\n\nYou've hit your free monthly broadcast limit! Boost your post or upgrade to add more listings this month.");
+                return;
+            }
+
             if (isBoostedActive) {
                 const days = document.getElementById('boostDaysSlider').value;
                 const cost = (days * 0.10).toFixed(2);
@@ -1101,6 +1115,8 @@
                 imageUrl = await compressImage(fileInput.files[0]);
             }
 
+            const activeEmailToSave = (currentUser && currentUser.email) ? currentUser.email : 'developer@scout.local';
+
             const { error } = await db.from('items').insert([
                 {
                     title: title,
@@ -1109,19 +1125,16 @@
                     image_url: imageUrl,
                     external_link: external_link,
                     is_boosted: isBoostedActive,
-                    user_email: currentUser ? currentUser.email : 'developer@scout.local'
+                    user_email: activeEmailToSave
                 }
             ]);
 
             if (error) {
                 alert("Error launching listing: " + error.message);
             } else {
-                const currentMonthYear = new Date().toISOString().slice(0, 7);
-                const storageKey = `scout_uploads_${userEmail}_${currentMonthYear}`;
-                let currentCount = parseInt(localStorage.getItem(storageKey) || '0');
                 localStorage.setItem(storageKey, (currentCount + 1).toString());
 
-                // Completely wipe all form fields clean back to placeholder state
+                // Reset all form inputs completely back to placeholder state
                 titleEl.value = '';
                 priceEl.value = '';
                 locationEl.value = '';
