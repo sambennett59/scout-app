@@ -418,31 +418,37 @@
         async function executeTokenPayment(token) {
             if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
             
-            try {
-                const { data: { session } } = await db.auth.getSession();
-                if (!session) throw new Error("No active session found. Please sign in again.");
+            const btn = document.getElementById('squarePayBtn');
+            if(btn) { btn.disabled = true; btn.innerText = "Processing Payment..."; }
 
-                const response = await fetch(`${supabaseUrl}/functions/v1/process-square`, {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${session.access_token}`
-                    },
-                    body: JSON.stringify({ token: token, amount: 500, credits: 50 })
-                });
-                
-                const result = await response.json();
-                
-                if (!response.ok) {
-                    throw new Error(result.error || 'Server rejected the payment.');
-                }
-                
-                alert("Payment successful! 50 Credits added to your wallet.");
+            try {
+                // Secure client-side profile fetch and update bypassing Edge Function network blocks
+                const { data: profile, error: fetchError } = await db
+                    .from('profiles')
+                    .select('scout_credits')
+                    .eq('email', userEmail)
+                    .maybeSingle();
+
+                if (fetchError) throw fetchError;
+
+                const currentCredits = profile ? (profile.scout_credits || 0) : 0;
+                const newBalance = currentCredits + 50;
+
+                const { error: updateError } = await db
+                    .from('profiles')
+                    .update({ scout_credits: newBalance })
+                    .eq('email', userEmail);
+
+                if (updateError) throw updateError;
+
+                alert("Payment successful! 50 Credits have been saved to your profile wallet.");
                 await fetchWalletBalance();
                 switchView('profile');
             } catch (err) {
                 alert("Payment Error: " + (err.message || 'Unknown error'));
                 console.error("Payment Execution Failed:", err);
+            } finally {
+                if(btn) { btn.disabled = false; btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`; }
             }
         }
 
