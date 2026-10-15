@@ -601,48 +601,32 @@
             switchView('swipe');
         }
 
-        function handleOpenAISearch(rawInput) {
-            const input = rawInput.toLowerCase().trim();
+        async function handleOpenAISearch(rawInput) {
+            const input = rawInput.trim();
             if (!input) return;
 
-            document.getElementById('deckHeaderTitle').innerText = `SEARCHING...`;
+            document.getElementById('deckHeaderTitle').innerText = `AI SEARCHING...`;
             switchView('swipe');
 
-            currentSearchQuery = '';
-            currentMaxPrice = 1000;
-            currentLocationFilter = '';
+            try {
+                const { data, error } = await db.functions.invoke('ai-search', {
+                    body: { prompt: input }
+                });
 
-            const priceMatch = input.match(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?(\d+)/);
-            if (priceMatch) {
-                currentMaxPrice = parseFloat(priceMatch[1]);
+                if (error) throw error;
+
+                currentSearchQuery = data.query ? data.query.toLowerCase() : '';
+                currentMaxPrice = data.max_price ? parseFloat(data.max_price) : 1000;
+                currentLocationFilter = data.location ? data.location.toLowerCase() : '';
+
+                loadDeck('search');
+            } catch (e) {
+                console.error("Edge Function AI Search Error, falling back to keyword search:", e);
+                currentSearchQuery = input.toLowerCase();
+                currentMaxPrice = 1000;
+                currentLocationFilter = '';
+                loadDeck('search');
             }
-
-            const locMatch = input.match(/(?:in|near|around)\s+([a-z\s]+)(?=\s+under|\s+less|\s+below|\$)/);
-            if (locMatch) {
-                currentLocationFilter = locMatch[1].trim();
-            } else if (input.includes('crediton')) {
-                currentLocationFilter = 'crediton';
-            }
-
-            let cleaned = input
-                .replace(/(?:under|less than|below|upto|up to)\s*(?:£|\$)?\d+/g, '')
-                .replace(/(?:in|near|around)\s+[a-z\s]+/g, '')
-                .replace(/(i need a|i want a|looking for|find me|show me|can you find|search for|a|an)/g, '')
-                .trim();
-
-            if (cleaned.includes('car') || cleaned.includes('vehicle') || cleaned.includes('drive') || cleaned.includes('merc') || cleaned.includes('bmw')) {
-                currentSearchQuery = 'car';
-            } else if (cleaned.includes('lamp') || cleaned.includes('lampshade') || cleaned.includes('shade') || cleaned.includes('light')) {
-                currentSearchQuery = 'lampshade';
-            } else if (cleaned.includes('chair') || cleaned.includes('seat') || cleaned.includes('sofa')) {
-                currentSearchQuery = 'chair';
-            } else if (cleaned.includes('vacuum') || cleaned.includes('hoover') || cleaned.includes('cleaner') || cleaned.includes('dyson')) {
-                currentSearchQuery = 'vacuum';
-            } else {
-                currentSearchQuery = cleaned;
-            }
-
-            loadDeck('search');
         }
 
         async function loadDeck(mode = 'standard') {
