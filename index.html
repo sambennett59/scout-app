@@ -507,16 +507,20 @@
 
         let items = []; let currentIndex = 0; let currentSearchQuery = ''; let currentMaxPrice = 1000; let currentLocationFilter = '';
 
+        // Restored AI Search function fully integrated back into your codebase
         async function handleOpenAISearch(rawInput) {
             const input = rawInput.trim(); if (!input) return;
             document.getElementById('deckHeaderTitle').innerText = `SEARCHING...`; switchView('swipe');
             try {
                 const { data, error } = await db.functions.invoke('parse-search', { body: { prompt: input } });
-                if (error) throw error; const parsed = typeof data === 'string' ? JSON.parse(data) : data;
+                if (error) throw error; 
+                const parsed = typeof data === 'string' ? JSON.parse(data) : data;
                 currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase(); 
                 currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000; 
                 currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
-            } catch (e) { currentSearchQuery = input.toLowerCase(); }
+            } catch (e) { 
+                currentSearchQuery = input.toLowerCase(); 
+            }
             loadDeck('search');
         }
 
