@@ -329,8 +329,12 @@
         let currentUser = null;
         let userEmail = 'anonymous_user@scout.local';
         let walletCredits = 0;
+        let rightSwipeLimit = 5;
+        let totalRightSwipes = 0;
+        let blockedSellers = [];
         let isBoostedActive = false;
-        let blockedSellers = JSON.parse(localStorage.getItem('scout_blocked') || '[]');
+        const todayStr = new Date().toISOString().split('T')[0];
+        const currentMonthStr = new Date().toISOString().slice(0, 7);
 
         function sanitizeHTML(str) {
             if (!str) return '';
@@ -346,19 +350,15 @@
             if (!window.Square) return;
             try {
                 squarePayments = window.Square.payments('sandbox-sq0idb-g8uFk_5JHE7XiPzQiNFzKg', 'LVV21APXPWPGF');
-                
-                // 1. Standard Card Setup
                 squareCard = await squarePayments.card();
                 await squareCard.attach('#square-card-container');
 
-                // 2. Setup Payment Request
                 const paymentRequest = squarePayments.paymentRequest({
                     countryCode: 'GB',
                     currencyCode: 'GBP',
                     total: { amount: '5.00', label: '50 Scout Credits', pending: false }
                 });
 
-                // 3. Apple Pay Setup
                 try {
                     const applePay = await squarePayments.applePay(paymentRequest);
                     const appleButton = document.getElementById('apple-pay-button');
@@ -369,22 +369,11 @@
                     appleButton.addEventListener('click', async (event) => {
                         event.preventDefault();
                         if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
-                        try {
-                            const result = await applePay.tokenize();
-                            if (result.status === 'OK') {
-                                await executeTokenPayment(result.token);
-                            } else {
-                                alert("Apple Pay failed: " + (result.errors?.[0]?.message || 'Unknown error'));
-                            }
-                        } catch (err) {
-                            console.error("Apple Pay error", err);
-                        }
+                        const result = await applePay.tokenize();
+                        if (result.status === 'OK') await executeTokenPayment(result.token);
                     });
-                } catch (e) {
-                    console.log("Apple Pay not available", e);
-                }
+                } catch (e) {}
 
-                // 4. Google Pay Setup
                 try {
                     const googlePay = await squarePayments.googlePay(paymentRequest);
                     const googleButton = document.getElementById('google-pay-button');
@@ -394,25 +383,13 @@
 
                     googleButton.addEventListener('click', async (event) => {
                         event.preventDefault();
-                        if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
-                        try {
-                            const result = await googlePay.tokenize();
-                            if (result.status === 'OK') {
-                                await executeTokenPayment(result.token);
-                            } else {
-                                alert("Google Pay failed: " + (result.errors?.[0]?.message || 'Unknown error'));
-                            }
-                        } catch (err) {
-                            console.error("Google Pay error", err);
-                        }
+                        if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
+                        const result = await googlePay.tokenize();
+                        if (result.status === 'OK') await executeTokenPayment(result.token);
                     });
-                } catch (e) {
-                    console.log("Google Pay not available", e);
-                }
+                } catch (e) {}
 
-            } catch (e) {
-                console.error("Square initialization failed", e);
-            }
+            } catch (e) { console.error("Square init error", e); }
         }
 
         async function executeTokenPayment(token) {
@@ -422,56 +399,33 @@
             if(btn) { btn.disabled = true; btn.innerText = "Processing Payment..."; }
 
             try {
-                // Secure client-side profile fetch and update bypassing Edge Function network blocks
-                const { data: profile, error: fetchError } = await db
-                    .from('profiles')
-                    .select('scout_credits')
-                    .eq('email', userEmail)
-                    .maybeSingle();
+                const { data: profile } = await db.from('profiles').select('scout_credits').eq('email', userEmail).maybeSingle();
+                const newBalance = (profile?.scout_credits || 0) + 50;
 
-                if (fetchError) throw fetchError;
+                const { error } = await db.from('profiles').update({ scout_credits: newBalance }).eq('email', userEmail);
+                if (error) throw error;
 
-                const currentCredits = profile ? (profile.scout_credits || 0) : 0;
-                const newBalance = currentCredits + 50;
-
-                const { error: updateError } = await db
-                    .from('profiles')
-                    .update({ scout_credits: newBalance })
-                    .eq('email', userEmail);
-
-                if (updateError) throw updateError;
-
-                alert("Payment successful! 50 Credits have been saved to your profile wallet.");
-                await fetchWalletBalance();
+                walletCredits = newBalance;
+                updateUI();
+                alert("Payment successful! 50 Credits added to your profile wallet.");
                 switchView('profile');
             } catch (err) {
-                alert("Payment Error: " + (err.message || 'Unknown error'));
-                console.error("Payment Execution Failed:", err);
+                alert("Payment Error: " + err.message);
             } finally {
                 if(btn) { btn.disabled = false; btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`; }
             }
         }
 
         async function processCardTopUp() {
-            if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
-            
+            if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
             const btn = document.getElementById('squarePayBtn');
-            btn.disabled = true;
-            btn.innerText = "Processing Securely...";
-
+            btn.disabled = true; btn.innerText = "Processing Securely...";
             try {
                 const result = await squareCard.tokenize();
-                if (result.status === 'OK') {
-                    await executeTokenPayment(result.token);
-                } else {
-                    alert("Card Tokenization failed: " + result.errors[0].message);
-                }
-            } catch (e) {
-                alert("An error occurred processing the payment.");
-                console.log(e);
-            }
-            btn.disabled = false;
-            btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`;
+                if (result.status === 'OK') await executeTokenPayment(result.token);
+                else alert("Card tokenization failed: " + result.errors[0].message);
+            } catch (e) { alert("Payment error occurred."); }
+            btn.disabled = false; btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`;
         }
 
         async function initAuth() {
@@ -479,38 +433,61 @@
             if (session && session.user) {
                 currentUser = session.user;
                 userEmail = currentUser.email;
-                await fetchWalletBalance();
-                await syncSwipeQuotas();
-                await updateMonthlyListingCount();
+                await syncProfileData();
             } else {
                 currentUser = null;
+                userEmail = 'anonymous_user@scout.local';
                 updateUI();
             }
             initSquare();
         }
 
-        async function fetchWalletBalance() {
-            if(!currentUser) return;
+        async function syncProfileData() {
+            if (!currentUser) return;
             try {
-                const { data } = await db.from('profiles').select('scout_credits').eq('email', userEmail).maybeSingle();
-                walletCredits = data ? (data.scout_credits || 0) : 0;
-                const displayEl = document.getElementById('walletBalanceDisplay');
-                if (displayEl) displayEl.innerText = walletCredits;
+                let { data } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
+                if (data) {
+                    walletCredits = data.scout_credits || 0;
+                    blockedSellers = data.blocked_sellers || [];
+                    if (data.swipe_date !== todayStr) {
+                        totalRightSwipes = 0;
+                        await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
+                    } else {
+                        totalRightSwipes = data.right_swipes || 0;
+                    }
+                } else {
+                    await db.from('profiles').insert([{ email: userEmail, scout_credits: 0, right_swipes: 0, swipe_date: todayStr, blocked_sellers: [] }]);
+                    walletCredits = 0; totalRightSwipes = 0; blockedSellers = [];
+                }
             } catch (e) { console.error(e); }
+            updateUI();
+        }
+
+        async function updateUI() {
+            const displayEl = document.getElementById('walletBalanceDisplay');
+            if (displayEl) displayEl.innerText = walletCredits;
+            document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
+            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
+            document.getElementById('findsBadge').innerText = currentFinds.length;
         }
 
         async function sendMagicLink() {
             const emailInput = document.getElementById('authEmailInput').value.trim();
             const statusMsg = document.getElementById('authStatusMsg');
             const sendBtn = document.getElementById('authSendBtn');
-            if (!emailInput || !emailInput.includes('@')) { alert("Please enter a valid email address."); return; }
-            sendBtn.innerText = "Sending Secure Link..."; sendBtn.disabled = true;
+            if (!emailInput || !emailInput.includes('@')) { alert("Enter a valid email."); return; }
+            sendBtn.innerText = "Sending Link..."; sendBtn.disabled = true;
             const { error } = await db.auth.signInWithOtp({ email: emailInput, options: { emailRedirectTo: window.location.origin } });
-            if (error) { statusMsg.innerText = "Error: " + sanitizeHTML(error.message); sendBtn.innerText = "Send Secure Login Link ✉️"; sendBtn.disabled = false; } 
-            else { statusMsg.className = "text-xs text-center text-[#bcf53f] pt-2 font-bold"; statusMsg.innerText = "Check your email inbox for your secure login link!"; sendBtn.innerText = "Link Sent! Check Email"; }
+            if (error) { statusMsg.innerText = "Error: " + error.message; sendBtn.disabled = false; sendBtn.innerText = "Send Login Link ✉️"; } 
+            else { statusMsg.innerText = "Check your email inbox for your secure login link!"; sendBtn.innerText = "Link Sent! Check Email"; }
         }
 
-        async function logoutUser() { await db.auth.signOut(); currentUser = null; userEmail = 'anonymous_user@scout.local'; walletCredits = 0; alert("Logged out successfully."); switchView('discover'); }
+        async function logoutUser() { 
+            await db.auth.signOut(); 
+            currentUser = null; userEmail = 'anonymous_user@scout.local'; walletCredits = 0; totalRightSwipes = 0; 
+            alert("Logged out successfully."); 
+            switchView('discover'); 
+        }
         
         function switchView(viewName) {
             document.querySelectorAll('.view-container').forEach(el => el.classList.add('hidden-view'));
@@ -528,50 +505,7 @@
             if (viewName === 'profile') loadProfileUI();
         }
 
-        let items = []; let currentIndex = 0; let rightSwipeLimit = 5; let totalRightSwipes = 0;
-        const todayStr = new Date().toISOString().split('T')[0];
-        const currentMonthStr = new Date().toISOString().slice(0, 7);
-
-        async function syncSwipeQuotas() {
-            try {
-                let { data } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
-                if (data) {
-                    if (data.swipe_date !== todayStr) {
-                        await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
-                        totalRightSwipes = 0;
-                    } else {
-                        totalRightSwipes = data.right_swipes || 0;
-                    }
-                } else {
-                    await db.from('profiles').insert([{ email: userEmail, right_swipes: 0, swipe_date: todayStr, scout_credits: 0 }]);
-                }
-            } catch (e) { console.error(e); }
-            updateUI();
-        }
-
-        async function updateMonthlyListingCount() {
-            if (!currentUser) return;
-            try {
-                let { count } = await db.from('items').select('*', { count: 'exact', head: true }).eq('user_email', userEmail).gte('created_at', currentMonthStr + '-01');
-                let totalListings = count || 0;
-                document.getElementById('uploadCounterBadge').innerText = `Monthly Limit: ${totalListings}/20`;
-            } catch (e) { console.error(e); }
-        }
-
-        function updateUI() {
-            let currentFinds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            document.getElementById('findsBadge').innerText = currentFinds.length;
-            document.getElementById('cardCounter').innerText = `Daily Swipes: ${totalRightSwipes} of ${rightSwipeLimit}`;
-        }
-
-        let currentSearchQuery = ''; let currentMaxPrice = 1000; let currentLocationFilter = '';
-
-        function applyFiltersAndExplore() {
-            document.getElementById('filterModal').classList.add('hidden');
-            currentMaxPrice = parseFloat(document.getElementById('filterPriceRange').value);
-            currentSearchQuery = ''; currentLocationFilter = '';
-            loadDeck('filtered'); switchView('swipe');
-        }
+        let items = []; let currentIndex = 0; let currentSearchQuery = ''; let currentMaxPrice = 1000; let currentLocationFilter = '';
 
         async function handleOpenAISearch(rawInput) {
             const input = rawInput.trim(); if (!input) return;
@@ -579,7 +513,9 @@
             try {
                 const { data, error } = await db.functions.invoke('parse-search', { body: { prompt: input } });
                 if (error) throw error; const parsed = typeof data === 'string' ? JSON.parse(data) : data;
-                currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase(); currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000; currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
+                currentSearchQuery = parsed.query ? parsed.query.toLowerCase() : input.toLowerCase(); 
+                currentMaxPrice = parsed.max_price ? parseFloat(parsed.max_price) : 1000; 
+                currentLocationFilter = parsed.location ? parsed.location.toLowerCase() : '';
             } catch (e) { currentSearchQuery = input.toLowerCase(); }
             loadDeck('search');
         }
@@ -590,9 +526,8 @@
             else if (mode === 'filtered') { document.getElementById('deckHeaderTitle').innerText = `FILTERED (MAX £${currentMaxPrice})`; } 
             else { document.getElementById('deckHeaderTitle').innerText = `SEARCH: ${currentSearchQuery ? currentSearchQuery.toUpperCase() : 'ALL'}`; }
 
-            let query = db.from('items').select('*').order('is_boosted', { ascending: false }).order('created_at', { ascending: false });
-            const { data } = await query;
-            if (!data || data.length === 0) { document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found in database.</div>`; return; }
+            let { data } = await db.from('items').select('*').order('is_boosted', { ascending: false }).order('created_at', { ascending: false });
+            if (!data || data.length === 0) { document.getElementById('cardDeck').innerHTML = `<div class="text-xs text-red-400">No listings found.</div>`; return; }
 
             const effectiveMaxPrice = Math.min(currentMaxPrice, globalFilterMaxPrice);
             items = data.filter(item => {
@@ -602,7 +537,8 @@
                 if (mode === 'search') {
                     const tLower = item.title.toLowerCase(); const lLower = item.location.toLowerCase();
                     return (!currentSearchQuery || tLower.includes(currentSearchQuery) || lLower.includes(currentLocationFilter)) && (!currentLocationFilter || lLower.includes(currentLocationFilter));
-                } return true;
+                }
+                return true;
             });
 
             if (mode === 'surprise') { items = [...items.filter(i => i.is_boosted), ...items.filter(i => !i.is_boosted).sort(() => Math.random() - 0.5)]; }
@@ -629,7 +565,7 @@
             initTouchGestures();
         }
 
-        function swipeAction(direction) {
+        async function swipeAction(direction) {
             const card = document.getElementById('activeSwipeCard'); if (!card) return;
             if (direction === 'right') {
                 if (totalRightSwipes >= rightSwipeLimit) { document.getElementById('paywallOverlay').classList.remove('hidden'); return; }
@@ -639,29 +575,31 @@
                     currentFinds.push({ title: currentItem.title, price: currentItem.price, location: currentItem.location, image_url: currentItem.image_url, external_link: currentItem.external_link });
                     localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
                 }
-                totalRightSwipes++; db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail); updateUI();
+                totalRightSwipes++;
+                if (currentUser) {
+                    await db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail);
+                }
+                updateUI();
                 card.style.transform = 'translateX(400px) rotate(20deg)';
             } else { card.style.transform = 'translateX(-400px) rotate(-20deg)'; }
             card.style.opacity = '0'; setTimeout(() => { currentIndex++; renderCard(); }, 250);
         }
 
         async function unlockMoreRightSwipe() {
-            if (!currentUser) { alert("Please sign in to unlock features."); switchView('setup'); return; }
-            const cost = 5; 
-            
-            if (confirm(`Deduct ${cost} Credits from your wallet to unlock 1 extra right-swipe slot?`)) {
-                const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: cost });
-                
-                if (error || !hasFunds) {
-                    alert("Insufficient balance. Please top up your wallet.");
-                    switchView('wallet');
-                    return;
-                }
-                
-                rightSwipeLimit += 1;
+            if (!currentUser) { alert("Please sign in first."); switchView('setup'); return; }
+            const cost = 5;
+            if (walletCredits < cost) {
+                alert("Insufficient credits. Please top up your wallet.");
+                switchView('wallet');
+                return;
+            }
+            if (confirm(`Deduct ${cost} Credits from your wallet to unlock 1 extra right-swipe?`)) {
+                walletCredits -= cost;
+                await db.from('profiles').update({ scout_credits: walletCredits, right_swipes: Math.max(0, totalRightSwipes - 1) }).eq('email', userEmail);
+                totalRightSwipes--;
                 document.getElementById('paywallOverlay').classList.add('hidden');
                 updateUI();
-                fetchWalletBalance();
+                alert("Extra swipe unlocked!");
                 completeBlockedRightSwipe();
             }
         }
@@ -674,7 +612,6 @@
                 currentFinds.push({ title: currentItem.title, price: currentItem.price, location: currentItem.location, image_url: currentItem.image_url, external_link: currentItem.external_link });
                 localStorage.setItem('scout_liked_items', JSON.stringify(currentFinds));
             }
-            totalRightSwipes++; db.from('profiles').update({ right_swipes: totalRightSwipes }).eq('email', userEmail); updateUI();
             card.style.transform = 'translateX(400px) rotate(20deg)'; card.style.opacity = '0';
             setTimeout(() => { currentIndex++; renderCard(); }, 250);
         }
@@ -683,16 +620,20 @@
 
         function reportCurrentListing() {
             document.getElementById('ugcMenuModal').classList.add('hidden');
-            alert("Listing reported successfully. Thank you for keeping Scout safe.");
+            alert("Listing reported successfully.");
             swipeAction('left');
         }
 
-        function blockCurrentSeller() {
+        async function blockCurrentSeller() {
             document.getElementById('ugcMenuModal').classList.add('hidden');
             const currentItem = items[currentIndex];
             if (currentItem && currentItem.user_email) {
-                blockedSellers.push(currentItem.user_email);
-                localStorage.setItem('scout_blocked', JSON.stringify(blockedSellers));
+                if (!blockedSellers.includes(currentItem.user_email)) {
+                    blockedSellers.push(currentItem.user_email);
+                    if (currentUser) {
+                        await db.from('profiles').update({ blocked_sellers: blockedSellers }).eq('email', userEmail);
+                    }
+                }
             }
             alert("Seller blocked.");
             swipeAction('left');
@@ -778,68 +719,51 @@
         async function executeUpload() {
             const titleEl = document.getElementById('itemTitle'); const priceEl = document.getElementById('itemPrice'); const locationEl = document.getElementById('itemLocation'); const linkEl = document.getElementById('itemLink'); const fileInput = document.getElementById('itemImageFile');
             const title = titleEl.value.trim(); let rawPrice = priceEl.value.trim(); const location = locationEl.value ? locationEl.value.trim() : ""; const external_link = linkEl.value.trim();
-            if (!title || !rawPrice || !location || !external_link) { alert("Please fill in the title, price, location, and link."); return; }
+            if (!title || !rawPrice || !location || !external_link) { alert("Please fill in all required fields."); return; }
 
             let { count } = await db.from('items').select('*', { count: 'exact', head: true }).eq('user_email', userEmail).gte('created_at', currentMonthStr + '-01');
             let currentCount = count || 0;
 
             if (currentCount >= 20) {
-                if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in to use credits for extra listings."); switchView('setup'); return; }
-                const overageCost = 10; 
-                
-                const confirmed = confirm(`Monthly Free Limit Reached (20/20).\n\nWould you like to spend ${overageCost} Credits from your wallet to post this extra listing?`);
-                if (!confirmed) return;
-
-                const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: overageCost });
-                if (error || !hasFunds) {
-                    alert("Insufficient credits to bypass listing limit. Please top up your wallet.");
-                    switchView('wallet');
-                    return;
-                }
-                fetchWalletBalance();
+                if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in."); switchView('setup'); return; }
+                const overageCost = 10;
+                if (walletCredits < overageCost) { alert("Insufficient credits to bypass listing limit. Top up your wallet."); switchView('wallet'); return; }
+                if (!confirm(`Spend ${overageCost} Credits to post this extra listing?`)) return;
+                walletCredits -= overageCost;
+                await db.from('profiles').update({ scout_credits: walletCredits }).eq('email', userEmail);
             }
 
             if (isBoostedActive) {
                 if (!currentUser) { alert("Please sign in to buy a boost."); switchView('setup'); return; }
                 const days = parseInt(document.getElementById('boostDaysSlider').value);
-                const costInCredits = days * 1; 
-                
-                const confirmed = confirm(`🚀 Boost Checkout: Deduct ${costInCredits} Credit${costInCredits > 1 ? 's' : ''} from your wallet for ${days} Day${days > 1 ? 's' : ''} of top-priority placement?`);
-                if (!confirmed) return;
-
-                const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: costInCredits });
-                if (error || !hasFunds) { alert("Insufficient credits. Please top up your wallet."); switchView('wallet'); return; }
-                fetchWalletBalance();
+                const costInCredits = days * 1;
+                if (walletCredits < costInCredits) { alert("Insufficient credits for boost."); switchView('wallet'); return; }
+                if (!confirm(`Deduct ${costInCredits} Credits for ${days} days of boost?`)) return;
+                walletCredits -= costInCredits;
+                await db.from('profiles').update({ scout_credits: walletCredits }).eq('email', userEmail);
             }
 
-            let formattedPrice = rawPrice; if (!formattedPrice.startsWith('£')) { formattedPrice = '£' + formattedPrice; }
+            let formattedPrice = rawPrice.startsWith('£') ? rawPrice : '£' + rawPrice;
             let imageUrl = "https://images.unsplash.com/photo-1526738549149-8e07eca6c147?auto=format&fit=crop&w=600&q=80";
             if (fileInput && fileInput.files && fileInput.files[0]) { imageUrl = await compressImage(fileInput.files[0]); }
 
-            const { error } = await db.from('items').insert([{ title: title, price: formattedPrice, location: location, image_url: imageUrl, external_link: external_link, is_boosted: isBoostedActive, user_email: (currentUser?.email || 'anonymous') }]);
+            const { error } = await db.from('items').insert([{ title: title, price: formattedPrice, location: location, image_url: imageUrl, external_link: external_link, is_boosted: isBoostedActive, user_email: userEmail }]);
             if (error) { alert("Error launching listing: " + error.message); } 
             else {
                 titleEl.value = ''; priceEl.value = ''; locationEl.value = ''; linkEl.value = ''; if(fileInput) fileInput.value = ''; setBoostMode(false);
                 alert("Listing successfully launched to the Swipe Deck!"); switchView('discover');
-                updateMonthlyListingCount();
             }
         }
 
         function loadFinds() {
             const container = document.getElementById('savedFindsContainer');
             const finds = JSON.parse(localStorage.getItem('scout_liked_items') || '[]');
-            if (finds.length === 0) {
-                container.innerHTML = `<div class="text-center py-10 text-zinc-500 text-sm">No saved finds yet.<br>Swipe right on items in the deck to save them here!</div>`;
-                return;
-            }
+            if (finds.length === 0) { container.innerHTML = `<div class="text-center py-10 text-zinc-500 text-sm">No saved finds yet.</div>`; return; }
             container.innerHTML = finds.map((item, idx) => `
                 <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex items-center justify-between shadow-md">
                     <div class="flex items-center space-x-3 overflow-hidden">
                         <img src="${sanitizeHTML(item.image_url)}" class="w-14 h-14 rounded-xl object-cover shrink-0" />
-                        <div class="truncate">
-                            <h4 class="text-sm font-bold text-white truncate">${sanitizeHTML(item.title)}</h4>
-                            <span class="text-xs font-black text-scout-neon">${sanitizeHTML(item.price)}</span>
-                        </div>
+                        <div class="truncate"><h4 class="text-sm font-bold text-white truncate">${sanitizeHTML(item.title)}</h4><span class="text-xs font-black text-scout-neon">${sanitizeHTML(item.price)}</span></div>
                     </div>
                     <div class="flex items-center space-x-2 shrink-0">
                         <a href="${sanitizeHTML(item.external_link)}" target="_blank" class="bg-scout-neon text-scout-dark text-xs font-bold px-3 py-2 rounded-xl">View</a>
@@ -859,11 +783,8 @@
 
         function loadRadars() {
             const container = document.getElementById('radarsListContainer');
-            const radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
-            if (radars.length === 0) {
-                container.innerHTML = `<div class="text-center py-6 text-zinc-500 text-xs">No active keywords tracked. Add one above to get alerts!</div>`;
-                return;
-            }
+            let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
+            if (radars.length === 0) { container.innerHTML = `<div class="text-center py-6 text-zinc-500 text-xs">No active keywords tracked.</div>`; return; }
             container.innerHTML = radars.map((radar, idx) => `
                 <div class="bg-[#1e1e22] border border-zinc-800 rounded-2xl p-4 flex justify-between items-center shadow-md">
                     <span class="text-sm font-bold text-white"><i class="fa-solid fa-bullseye text-scout-neon mr-2"></i>${sanitizeHTML(radar)}</span>
@@ -873,30 +794,22 @@
         }
 
         function addRadar() {
-            const input = document.getElementById('radarKeywordInput');
-            const val = input.value.trim();
-            if (!val) return;
+            const input = document.getElementById('radarKeywordInput'); const val = input.value.trim(); if (!val) return;
             let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
-            if (!radars.includes(val)) {
-                radars.push(val);
-                localStorage.setItem('scout_radars', JSON.stringify(radars));
-            }
-            input.value = '';
-            loadRadars();
+            if (!radars.includes(val)) { radars.push(val); localStorage.setItem('scout_radars', JSON.stringify(radars)); }
+            input.value = ''; loadRadars();
         }
 
         function removeRadar(index) {
-            let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]');
-            radars.splice(index, 1);
-            localStorage.setItem('scout_radars', JSON.stringify(radars));
-            loadRadars();
+            let radars = JSON.parse(localStorage.getItem('scout_radars') || '[]'); radars.splice(index, 1);
+            localStorage.setItem('scout_radars', JSON.stringify(radars)); loadRadars();
         }
 
         async function loadProfileUI() {
             if (currentUser) {
                 document.getElementById('profileName').innerText = currentUser.email.split('@')[0];
                 document.getElementById('profileEmail').innerText = currentUser.email;
-                await fetchWalletBalance();
+                await syncProfileData();
             } else {
                 document.getElementById('profileName').innerText = "Guest User";
                 document.getElementById('profileEmail').innerHTML = `<button onclick="switchView('setup')" class="text-[#bcf53f] underline">Sign in securely here</button>`;
