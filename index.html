@@ -217,7 +217,7 @@
             </main>
         </div>
 
-        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT (APPLE PAY, GOOGLE PAY & CARDS) -->
+        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT -->
         <div id="view-wallet" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-2">
                 <button onclick="switchView('profile')" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
@@ -353,7 +353,7 @@
                 const paymentRequest = squarePayments.paymentRequest({
                     countryCode: 'GB',
                     currencyCode: 'GBP',
-                    total: { amount: '5.00', label: '50 Scout Credits' }
+                    total: { amount: '5.00', label: '50 Scout Credits', pending: false }
                 });
 
                 try {
@@ -365,6 +365,20 @@
 
                 try {
                     const googlePay = await squarePayments.googlePay(paymentRequest);
+                    
+                    document.getElementById('google-pay-button').addEventListener('click', async (event) => {
+                        event.preventDefault();
+                        if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
+                        try {
+                            const result = await googlePay.tokenize();
+                            if (result.status === 'OK') {
+                                await executeTokenPayment(result.token);
+                            }
+                        } catch (err) {
+                            console.error("Google Pay tokenization failed", err);
+                        }
+                    });
+
                     await googlePay.attach('#google-pay-button');
                     document.getElementById('google-pay-button').style.display = 'block';
                     document.getElementById('wallet-divider').style.display = 'block';
@@ -530,7 +544,7 @@
                 if (numericPrice > effectiveMaxPrice) return false;
                 if (mode === 'search') {
                     const tLower = item.title.toLowerCase(); const lLower = item.location.toLowerCase();
-                    return (!currentSearchQuery || tLower.includes(currentSearchQuery) || lLower.includes(currentSearchQuery)) && (!currentLocationFilter || lLower.includes(currentLocationFilter));
+                    return (!currentSearchQuery || tLower.includes(currentSearchQuery) || lLower.includes(currentLocationFilter)) && (!currentLocationFilter || lLower.includes(currentLocationFilter));
                 } return true;
             });
 
