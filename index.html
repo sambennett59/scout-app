@@ -124,7 +124,7 @@
                     <button onclick="document.getElementById('ugcMenuModal').classList.add('hidden')" class="text-xs text-zinc-400 underline pt-2 cursor-pointer">Cancel</button>
                 </div>
 
-                <!-- PAYWALL OVERLAY: 5 CREDITS TO UNLOCK SWIPE -->
+                <!-- PAYWALL OVERLAY -->
                 <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/98 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                     <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg"><i class="fa-solid fa-heart-circle-bolt"></i></div>
                     <div class="space-y-1">
@@ -218,7 +218,7 @@
             </main>
         </div>
 
-        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT -->
+        <!-- VIEW: SECURE WALLET / SQUARE CHECKOUT (INCLUDING APPLE PAY & GOOGLE PAY) -->
         <div id="view-wallet" class="view-container hidden-view flex flex-col">
             <header class="flex justify-between items-center px-6 pt-6 pb-2">
                 <button onclick="switchView('profile')" class="text-zinc-400 hover:text-white text-xl cursor-pointer"><i class="fa-solid fa-chevron-left"></i></button>
@@ -232,9 +232,15 @@
                         <p class="text-xs text-zinc-400">Add 50 Credits to your wallet (10p per credit) to unlock extra right-swipes (5 credits each) or bypass listing limits.</p>
                     </div>
                     
+                    <!-- SQUARE DIGITAL WALLET BUTTONS (APPLE PAY / GOOGLE PAY) -->
+                    <div id="apple-pay-button" style="display: none;" class="mb-3"></div>
+                    <div id="google-pay-button" style="display: none;" class="mb-3"></div>
+                    <div id="wallet-divider" class="text-center text-[10px] text-zinc-500 font-bold uppercase tracking-wider my-2" style="display: none;">- OR PAY WITH CARD -</div>
+
+                    <!-- SQUARE CARD CHECKOUT FORM -->
                     <form id="payment-form" class="space-y-4">
                         <div id="square-card-container" class="sq-card-wrapper min-h-[80px]"></div>
-                        <button type="button" id="squarePayBtn" onclick="processTopUp()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50">
+                        <button type="button" id="squarePayBtn" onclick="processCardTopUp()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50">
                             Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>
                         </button>
                     </form>
@@ -336,6 +342,9 @@
             return temp.innerHTML;
         }
 
+        // ==========================================
+        // SQUARE & DIGITAL WALLETS INITIALIZATION
+        // ==========================================
         let squarePayments;
         let squareCard;
 
@@ -343,14 +352,50 @@
             if (!window.Square) return;
             try {
                 squarePayments = window.Square.payments('sandbox-sq0idb-g8uFk_5JHE7XiPzQiNFzKg', 'LVV21APXPWPGF');
+                
+                // Attach Card Form
                 squareCard = await squarePayments.card();
                 await squareCard.attach('#square-card-container');
+
+                // Initialize Apple Pay & Google Pay if supported by device
+                const paymentRequest = squarePayments.paymentRequest({
+                    countryCode: 'GB',
+                    currencyCode: 'GBP',
+                    total: { amount: '5.00', label: '50 Scout Credits' }
+                });
+
+                try {
+                    const applePay = await squarePayments.applePay(paymentRequest);
+                    await applePay.attach('#apple-pay-button');
+                    document.getElementById('apple-pay-button').style.display = 'block';
+                    document.getElementById('wallet-divider').style.display = 'block';
+                } catch (e) { /* Apple Pay not supported on this browser/device */ }
+
+                try {
+                    const googlePay = await squarePayments.googlePay(paymentRequest);
+                    await googlePay.attach('#google-pay-button');
+                    document.getElementById('google-pay-button').style.display = 'block';
+                    document.getElementById('wallet-divider').style.display = 'block';
+                } catch (e) { /* Google Pay not supported on this browser/device */ }
+
             } catch (e) {
                 console.error("Square initialization failed", e);
             }
         }
 
-        async function processTopUp() {
+        async function executeTokenPayment(token) {
+            const { data, error } = await db.functions.invoke('process-square', {
+                body: { token: token, amount: 500, credits: 50 }
+            });
+            
+            if (error) throw error;
+            
+            alert("Payment successful! 50 Credits added to your wallet.");
+            await fetchWalletBalance();
+            switchView('profile');
+        }
+
+        async function processCardTopUp() {
             if (!currentUser) { alert("Please sign in to your Account first."); switchView('setup'); return; }
             
             const btn = document.getElementById('squarePayBtn');
@@ -360,15 +405,7 @@
             try {
                 const result = await squareCard.tokenize();
                 if (result.status === 'OK') {
-                    const { data, error } = await db.functions.invoke('process-square', {
-                        body: { token: result.token, amount: 500, credits: 50 }
-                    });
-                    
-                    if (error) throw error;
-                    
-                    alert("Payment successful! 50 Credits added to your wallet.");
-                    await fetchWalletBalance();
-                    switchView('profile');
+                    await executeTokenPayment(result.token);
                 } else {
                     alert("Card Tokenization failed: " + result.errors[0].message);
                 }
@@ -380,17 +417,19 @@
             btn.innerHTML = `Pay £5.00 Securely <i class="fa-solid fa-lock ml-1"></i>`;
         }
 
+        // PERMANENT SERVER-SIDE QUOTA SYNC ON RELOAD
         async function initAuth() {
             const { data: { session } } = await db.auth.getSession();
             if (session && session.user) {
                 currentUser = session.user;
                 userEmail = currentUser.email;
                 await fetchWalletBalance();
+                await syncSwipeQuotas();
             } else {
                 currentUser = null;
+                updateUI();
             }
             initSquare();
-            syncSwipeQuotas();
             updateMonthlyListingCount();
         }
 
@@ -442,11 +481,18 @@
         let items = []; let currentIndex = 0; let rightSwipeLimit = 5; let totalRightSwipes = 0;
         const todayStr = new Date().toISOString().split('T')[0];
 
+        // FIXED: Syncs strictly with database records, preventing app-reload bypasses
         async function syncSwipeQuotas() {
             try {
                 let { data } = await db.from('profiles').select('*').eq('email', userEmail).maybeSingle();
-                if (data && data.swipe_date !== todayStr) { await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail); totalRightSwipes = 0; } 
-                else if (data) { totalRightSwipes = data.right_swipes || 0; }
+                if (data) {
+                    if (data.swipe_date !== todayStr) {
+                        await db.from('profiles').update({ right_swipes: 0, swipe_date: todayStr }).eq('email', userEmail);
+                        totalRightSwipes = 0;
+                    } else {
+                        totalRightSwipes = data.right_swipes || 0;
+                    }
+                }
             } catch (e) { console.error(e); }
             updateUI();
         }
@@ -538,7 +584,6 @@
             card.style.opacity = '0'; setTimeout(() => { currentIndex++; renderCard(); }, 250);
         }
 
-        // UNLOCK SWIPE: COSTS 5 CREDITS (50p)
         async function unlockMoreRightSwipe() {
             if (!currentUser) { alert("Please sign in to unlock features."); switchView('setup'); return; }
             const cost = 5; 
@@ -621,10 +666,9 @@
             const storageKey = `scout_uploads_${userEmail}_${new Date().toISOString().slice(0, 7)}`;
             let currentCount = parseInt(localStorage.getItem(storageKey) || '0');
 
-            // 20 FREE LISTING LIMIT CHECK & 10 CREDIT OVERAGE BYPASS
             if (currentCount >= 20) {
                 if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in to use credits for extra listings."); switchView('setup'); return; }
-                const overageCost = 10; // 10 Credits (£1.00) for listing #21+
+                const overageCost = 10; 
                 
                 const confirmed = confirm(`Monthly Free Limit Reached (20/20).\n\nWould you like to spend ${overageCost} Credits (£1.00) from your wallet to post this extra listing?`);
                 if (!confirmed) return;
