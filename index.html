@@ -10,7 +10,6 @@
     
     <!-- Supabase & Square SDKs -->
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-    <!-- NOTE: Change to https://web.squarecdn.com/v1/square.js for LIVE production -->
     <script type="text/javascript" src="https://sandbox.web.squarecdn.com/v1/square.js"></script>
     
     <link rel="manifest" href="manifest.json">
@@ -21,8 +20,6 @@
         .hidden-view { display: none !important; }
         .swipe-card { transition: transform 0.25s ease, opacity 0.25s ease; touch-action: pan-y; will-change: transform; }
         .dragging { transition: none !important; }
-        
-        /* Square specific styling */
         .sq-card-wrapper { background: #121214; border: 1px solid #27272a; border-radius: 0.75rem; padding: 1rem; margin-bottom: 1rem; }
     </style>
 </head>
@@ -127,11 +124,12 @@
                     <button onclick="document.getElementById('ugcMenuModal').classList.add('hidden')" class="text-xs text-zinc-400 underline pt-2 cursor-pointer">Cancel</button>
                 </div>
 
+                <!-- PAYWALL OVERLAY: 5 CREDITS TO UNLOCK SWIPE -->
                 <div id="paywallOverlay" class="absolute inset-0 bg-scout-dark/98 backdrop-blur-md z-[100] flex flex-col items-center justify-center p-6 text-center space-y-4 hidden">
                     <div class="w-16 h-16 bg-scout-neon/10 border-2 border-scout-neon/30 text-scout-neon rounded-3xl flex items-center justify-center text-3xl shadow-lg"><i class="fa-solid fa-heart-circle-bolt"></i></div>
                     <div class="space-y-1">
                         <h2 class="text-xl font-black text-white">Swipe Limit Reached</h2>
-                        <p class="text-xs text-zinc-400 px-2">Unlock an extra right-swipe slot using your wallet balance.</p>
+                        <p class="text-xs text-zinc-400 px-2">Unlock 1 extra right-swipe for <strong class="text-scout-neon">5 Credits</strong> (50p value).</p>
                     </div>
                     <button onclick="unlockMoreRightSwipe()" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black uppercase tracking-wider py-3.5 rounded-2xl shadow-lg transition text-xs flex items-center justify-center space-x-2 cursor-pointer">
                         <span>Unlock Swipe (5 Credits)</span><i class="fa-solid fa-unlock"></i>
@@ -197,13 +195,13 @@
                     </div>
                 </div>
                 
-                <!-- WALLET UI IN PROFILE -->
+                <!-- WALLET UI -->
                 <div class="bg-[#121214] border border-scout-neon/50 rounded-3xl p-6 shadow-xl relative overflow-hidden">
                     <div class="absolute top-0 right-0 p-4 opacity-10"><i class="fa-solid fa-wallet text-6xl text-scout-neon"></i></div>
                     <h3 class="text-xs font-bold uppercase tracking-wider text-zinc-400 mb-1">Scout Wallet Balance</h3>
                     <div class="text-3xl font-black text-white mb-4"><span id="walletBalanceDisplay">0</span> <span class="text-sm text-scout-neon">CREDITS</span></div>
                     <button onclick="switchView('wallet')" class="w-full bg-scout-neon hover:bg-scout-neonhover text-scout-dark font-black text-xs uppercase tracking-wider py-3.5 rounded-xl transition cursor-pointer">
-                        Top Up Wallet Securely <i class="fa-solid fa-arrow-right ml-1"></i>
+                        Top Up Wallet (£5 for 50 Credits) <i class="fa-solid fa-arrow-right ml-1"></i>
                     </button>
                 </div>
 
@@ -231,10 +229,9 @@
                 <div class="bg-[#1e1e22] border border-zinc-800 rounded-3xl p-5 shadow-xl">
                     <div class="space-y-1 border-b border-zinc-800 pb-4 mb-4">
                         <h2 class="text-lg font-black text-white flex justify-between"><span>Buy 50 Credits</span><span class="text-scout-neon">£5.00</span></h2>
-                        <p class="text-xs text-zinc-400">Add 50 Scout Credits to your digital wallet to unlock swipes and boost listings securely.</p>
+                        <p class="text-xs text-zinc-400">Add 50 Credits to your wallet (10p per credit) to unlock extra right-swipes (5 credits each) or bypass listing limits.</p>
                     </div>
                     
-                    <!-- SQUARE WEB PAYMENTS SDK CONTAINER -->
                     <form id="payment-form" class="space-y-4">
                         <div id="square-card-container" class="sq-card-wrapper min-h-[80px]"></div>
                         <button type="button" id="squarePayBtn" onclick="processTopUp()" class="w-full bg-[#bcf53f] hover:bg-[#adff2f] text-[#121214] font-black uppercase tracking-wider py-4 rounded-2xl shadow-lg transition active:scale-[0.98] mt-2 cursor-pointer disabled:opacity-50">
@@ -339,9 +336,6 @@
             return temp.innerHTML;
         }
 
-        // ==========================================
-        // SQUARE PAYMENTS INITIALIZATION
-        // ==========================================
         let squarePayments;
         let squareCard;
 
@@ -544,11 +538,12 @@
             card.style.opacity = '0'; setTimeout(() => { currentIndex++; renderCard(); }, 250);
         }
 
+        // UNLOCK SWIPE: COSTS 5 CREDITS (50p)
         async function unlockMoreRightSwipe() {
             if (!currentUser) { alert("Please sign in to unlock features."); switchView('setup'); return; }
             const cost = 5; 
             
-            if (confirm(`Deduct ${cost} Credits from your wallet to unlock 1 extra right-swipe slot?`)) {
+            if (confirm(`Deduct ${cost} Credits (50p value) from your wallet to unlock 1 extra right-swipe slot?`)) {
                 const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: cost });
                 
                 if (error || !hasFunds) {
@@ -602,7 +597,7 @@
             else { stdBtn.className = "bg-[#bcf53f] text-[#121214] font-black text-xs uppercase tracking-wider py-2.5 rounded-xl transition cursor-pointer"; boostBtn.className = "bg-zinc-900 text-zinc-400 hover:text-white font-bold text-xs uppercase tracking-wider py-2.5 rounded-xl border border-zinc-800 transition cursor-pointer"; sliderContainer.classList.add('hidden'); }
         }
 
-        function updateBoostCost(days) { document.getElementById('sliderDaysLabel').innerText = days + (days == 1 ? ' Day' : ' Days'); document.getElementById('sliderCostLabel').innerText = (days * 1) + ' Credits'; }
+        function updateBoostCost(days) { document.getElementById('sliderDaysLabel').innerText = days + (days == 1 ? ' Day' : ' Days'); document.getElementById('sliderCostLabel').innerText = (days * 1) + ' Credit' + (days > 1 ? 's' : ''); }
 
         function compressImage(file, maxWidth = 800, quality = 0.7) {
             return new Promise((resolve) => {
@@ -625,18 +620,35 @@
 
             const storageKey = `scout_uploads_${userEmail}_${new Date().toISOString().slice(0, 7)}`;
             let currentCount = parseInt(localStorage.getItem(storageKey) || '0');
-            if (currentCount >= 20) { alert("Monthly Free Listing Limit Reached (20/20)."); return; }
+
+            // 20 FREE LISTING LIMIT CHECK & 10 CREDIT OVERAGE BYPASS
+            if (currentCount >= 20) {
+                if (!currentUser) { alert("Monthly Free Listing Limit (20/20) reached. Please sign in to use credits for extra listings."); switchView('setup'); return; }
+                const overageCost = 10; // 10 Credits (£1.00) for listing #21+
+                
+                const confirmed = confirm(`Monthly Free Limit Reached (20/20).\n\nWould you like to spend ${overageCost} Credits (£1.00) from your wallet to post this extra listing?`);
+                if (!confirmed) return;
+
+                const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: overageCost });
+                if (error || !hasFunds) {
+                    alert("Insufficient credits to bypass listing limit. Please top up your wallet.");
+                    switchView('wallet');
+                    return;
+                }
+                fetchWalletBalance();
+            }
 
             if (isBoostedActive) {
                 if (!currentUser) { alert("Please sign in to buy a boost."); switchView('setup'); return; }
                 const days = parseInt(document.getElementById('boostDaysSlider').value);
                 const costInCredits = days * 1; 
                 
-                if (confirm(`🚀 Boost Checkout: Deduct ${costInCredits} Credits from your wallet for ${days} Days of top-priority placement?`)) {
-                    const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: costInCredits });
-                    if (error || !hasFunds) { alert("Insufficient credits. Please top up your wallet."); switchView('wallet'); return; }
-                    fetchWalletBalance();
-                } else { return; }
+                const confirmed = confirm(`🚀 Boost Checkout: Deduct ${costInCredits} Credit${costInCredits > 1 ? 's' : ''} from your wallet for ${days} Day${days > 1 ? 's' : ''} of top-priority placement?`);
+                if (!confirmed) return;
+
+                const { data: hasFunds, error } = await db.rpc('spend_credits', { deduction: costInCredits });
+                if (error || !hasFunds) { alert("Insufficient credits. Please top up your wallet."); switchView('wallet'); return; }
+                fetchWalletBalance();
             }
 
             let formattedPrice = rawPrice; if (!formattedPrice.startsWith('£')) { formattedPrice = '£' + formattedPrice; }
