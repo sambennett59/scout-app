@@ -601,7 +601,7 @@
             switchView('swipe');
         }
 
-        // CALLS YOUR SUPABASE EDGE FUNCTION TO USE OPENAI API & CREDITS DIRECTLY
+        // INVOKES YOUR ACTIVE SUPABASE EDGE FUNCTION 'parse-search' LINKED TO OPENAI
         async function handleOpenAISearch(rawInput) {
             const input = rawInput.trim();
             if (!input) return;
@@ -610,7 +610,7 @@
             switchView('swipe');
 
             try {
-                const { data, error } = await db.functions.invoke('ai-search', {
+                const { data, error } = await db.functions.invoke('parse-search', {
                     body: { prompt: input }
                 });
 
